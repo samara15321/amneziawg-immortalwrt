@@ -8,7 +8,7 @@ on:
     tags:
       - "SNAPSHOT"
   schedule:
-   # - cron: '0 */4 * * *'
+    - cron: '0 */4 * * *'
   workflow_dispatch:
 
 jobs:
@@ -52,7 +52,7 @@ jobs:
           echo "Checking for release file: $RELEASE_FILE in release: $TAG"
 
           # Используем GitHub CLI для проверки наличия файла в релизе
-          if gh release view "$TAG" --repo samara1531/awg-openwrt --json assets --jq ".assets | .[].name" | grep -q "$RELEASE_FILE"; then
+          if gh release view "$TAG" --repo samara15321/awg-immortalwrt --json assets --jq ".assets | .[].name" | grep -q "$RELEASE_FILE"; then
             echo "Release file $RELEASE_FILE already exists. Skipping job."
             echo "FILE_EXISTS=true" >> $GITHUB_ENV
           else
@@ -95,7 +95,7 @@ jobs:
 
           # Setup & install feeds
           wget https://downloads.openwrt.org/snapshots/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
-          echo "src-git awgopenwrt https://github.com/samara1531/awg-openwrt.git" >> ./feeds.conf
+          echo "src-git awgopenwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
           ./scripts/feeds update && ./scripts/feeds install -a
 
           # Setup config with AWG and dependencies
@@ -176,7 +176,7 @@ jobs:
           # Удаляем найденные артефакты по имени
           for asset_name in $assets; do
             echo "Deleting asset with name: $asset_name"
-            gh release delete-asset "${{ matrix.build_env.tag }}" "$asset_name" --repo samara1531/awg-openwrt
+            gh release delete-asset "${{ matrix.build_env.tag }}" "$asset_name" --repo samara15321/awg-immortalwrt
           done
 
       - name: Release
