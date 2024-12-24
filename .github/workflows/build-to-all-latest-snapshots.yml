@@ -46,7 +46,7 @@ jobs:
         id: check_release
         run: |
           postfix="${{ matrix.build_env.tag }}_${{ matrix.build_env.vermagic }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
-          RELEASE_FILE="kmod-amneziawg_${postfix}.ipk"
+          RELEASE_FILE="kmod-amneziawg_${postfix}.apk"
           TAG=${{ matrix.build_env.tag }}
 
           echo "Checking for release file: $RELEASE_FILE in release: $TAG"
@@ -160,9 +160,9 @@ jobs:
           tag_name=${{  github.ref_name }}
           mkdir -p awgrelease
           postfix="${{ matrix.build_env.tag }}_${{ matrix.build_env.vermagic }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
-          cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
-          cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg_*.ipk awgrelease/luci-app-amneziawg_${postfix}.ipk
-          cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg_*.ipk awgrelease/kmod-amneziawg_${postfix}.ipk
+          cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools-*.apk awgrelease/amneziawg-tools_${postfix}.apk
+          cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg-*.apk awgrelease/luci-app-amneziawg_${postfix}.apk
+          cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg-*.apk awgrelease/kmod-amneziawg_${postfix}.apk
 
       - name: Delete old release assets
         if: env.FILE_EXISTS == 'false'
@@ -171,7 +171,7 @@ jobs:
           echo "Looking for old release files ending with: ${postfix}"
 
           # Получаем список всех артефактов релиза по имени
-          assets=$(gh release view "${{ matrix.build_env.tag }}" --repo Slava-Shchipunov/awg-openwrt --json assets --jq ".assets | .[] | select(.name | endswith(\"$postfix.ipk\")) | .name")
+          assets=$(gh release view "${{ matrix.build_env.tag }}" --repo Slava-Shchipunov/awg-openwrt --json assets --jq ".assets | .[] | select(.name | endswith(\"$postfix.apk\")) | .name")
 
           # Удаляем найденные артефакты по имени
           for asset_name in $assets; do
@@ -183,5 +183,5 @@ jobs:
         if: env.FILE_EXISTS == 'false'
         uses: softprops/action-gh-release@v1
         with:
-          files: awgrelease/*.ipk
+          files: awgrelease/*.apk
           tag_name: ${{ matrix.build_env.tag }}
