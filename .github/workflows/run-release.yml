@@ -2,8 +2,8 @@ name: Sync OpenWRT Releases
 
 on:
   schedule:
-    - cron: '0 0 */3 * *' # Проверка новых релизов раз в три дня
-  workflow_dispatch: # Возможность вручную запустить Action
+#    - cron: '0 0 */3 * *' # Проверка новых релизов раз в три дня
+#  workflow_dispatch: # Возможность вручную запустить Action
 
 jobs:
   sync-releases:
@@ -27,7 +27,7 @@ jobs:
       - name: Check if release exists in your repo
         id: check_release
         run: |
-          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara1531/awg-openwrt/releases/tags/${{ steps.get_release.outputs.release_tag }} | jq -r .tag_name)
+          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }} | jq -r .tag_name)
           if [ "$RELEASE_EXISTS" == "null" ]; then
             echo "::set-output name=release_exists::false"
           else
@@ -49,7 +49,7 @@ jobs:
           -----------------------------------------------------
           \`\`\`"
 
-          curl -X POST https://api.github.com/repos/samara1531/awg-openwrt/releases \
+          curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "$(jq -n --arg tag "${{ steps.get_release.outputs.release_tag }}" \
