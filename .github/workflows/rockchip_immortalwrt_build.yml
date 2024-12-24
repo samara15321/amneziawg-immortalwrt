@@ -40,7 +40,7 @@ jobs:
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
           # Setup & install feeds
           wget https://downloads.immortalwrt.org/releases/24.10.0-rc2/targets/rockchip/armv8/feeds.buildinfo -O feeds.conf
-          echo "src-git awgopenwrt https://github.com/yury-sannikov/awg-openwrt.git" >> ./feeds.conf
+          echo "src-git awgopenwrt https://github.com/samara1531/awg-openwrt.git" >> ./feeds.conf
           ./scripts/feeds update && ./scripts/feeds install -a
           # Setup config with AWG and dependencies
           wget https://downloads.immortalwrt.org/releases/24.10.0-rc2/targets/rockchip/armv8/config.buildinfo -O .config
