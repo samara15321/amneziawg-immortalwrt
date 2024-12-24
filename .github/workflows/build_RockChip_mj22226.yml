@@ -3,7 +3,7 @@ name: Create Release aarch64_generic
 on:
   push:
     tags:
-      - "*.*.*"
+      - "mj22226.*.*.*"
 jobs: 
   build:
     name: "${{ matrix.build_env.tag }} - ${{ matrix.build_env.pkgarch}} :: ${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}} build"
@@ -42,7 +42,7 @@ jobs:
           
           # Setup & install feeds
           wget https://github.com/mj22226/openwrt/releases/download/rockchip-6.6/feeds.buildinfo -O feeds.conf
-          echo "src-git awgopenwrt https://github.com/samara1532/amneziawg-Rockchip.git" >> ./feeds.conf
+          echo "src-git awgopenwrt https://github.com/samara1531/awg-openwrt.git" >> ./feeds.conf
           ./scripts/feeds update && ./scripts/feeds install -a
           
           # Setup config with AWG and dependencies
