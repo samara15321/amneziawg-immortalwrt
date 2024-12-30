@@ -61,6 +61,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: sync-releases
     if: needs.sync-releases.outputs.release_exists == 'false'
-    uses: samara15321/awg-openwrt/.github/workflows/build-module.yml@master
+    uses: samara15321/awg-immortalwrt/.github/workflows/build-module.yml@master
     with:
       tag_name: ${{ needs.sync-releases.outputs.release_tag }}
