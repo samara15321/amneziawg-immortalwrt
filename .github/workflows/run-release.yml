@@ -17,41 +17,19 @@ jobs:
       - name: Extract first release tag
         id: get_release
         run: |
-           pip install requests beautifulsoup4
-           release_tag=$(python -c "
-           import requests
-           from bs4 import BeautifulSoup
+          pip install requests beautifulsoup4
+          python -c "
+          import requests
+          from bs4 import BeautifulSoup
 
-    def get_first_release_tag(url):
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36'
-        }
-    
-            # Отправляем запрос к странице
-            response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-                   # Парсим HTML
-            soup = BeautifulSoup(response.content, 'html.parser')
-        
-                   # Находим первый тег в списке тегов
-           release_tag = soup.find('a', {'class': 'd-inline-block'})
-        if release_tag:
-                   # Извлекаем имя тега
-            release_name = release_tag.get_text(strip=True)
-            return release_name
-        else:
-             return None
-        else:
-             return None
+          url = 'https://github.com/immortalwrt/immortalwrt/tags'
+          response = requests.get(url)
+          soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Указываем ссылку на страницу с тегами
-        url = 'https://github.com/immortalwrt/immortalwrt/tags'
-        tag = get_first_release_tag(url)
-        if tag:
-              print(tag)
-        else:
-              print('Тег релиза не найден.')
-            ")
-              echo "RELEASE_TAG=$release_tag" >> $GITHUB_ENV
+          first_tag = soup.find('span', class_='css-truncate-target')
+          print(first_tag.text.strip())
+          "
+          echo "RELEASE_TAG=$(python -c 'import requests; from bs4 import BeautifulSoup; url = \"https://github.com/immortalwrt/immortalwrt/tags\"; response = requests.get(url); soup = BeautifulSoup(response.text, \"html.parser\"); first_tag = soup.find(\"span\", class_=\"css-truncate-target\"); print(first_tag.text.strip())')" >> $GITHUB_ENV
 
       # Шаг 3: Проверка, существует ли релиз в репозитории
       - name: Check if release exists in your repo
@@ -64,13 +42,9 @@ jobs:
         if: steps.check_release.outputs.tag_name == 'Not found'
         run: |
           ART="
-            _______                     ________        __
-          |       |.-----.-----.-----.|  |  |  |.----.|  |_
-          |   -   ||  _  |  -__|     ||  |  |  ||   _||   _|
-          |_______||   __|_____|__|__||________||__|  |____|
-                    |__| A M N E Z I A   W I R E G U A R D
+
           -----------------------------------------------------
-          OpenWrt ${{ env.RELEASE_TAG }}
+          immortalwrt ${{ env.RELEASE_TAG }}
           -----------------------------------------------------"
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
