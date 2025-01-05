@@ -15,11 +15,10 @@ jobs:
       - name: Get the latest release from OpenWRT
         id: get_release
         run: |
-          curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags > latest_release.json
-          RELEASE_TAG=$(jq -r .tag_name latest_release.json)
-          RELEASE_NAME=$(jq -r .name latest_release.json)
-          echo "::set-output name=release_tag::$RELEASE_TAG"
-          echo "::set-output name=release_name::$RELEASE_NAME"
+           url = "https://github.com/immortalwrt/immortalwrt/tags"
+           release_tag = get_first_tag_starting_with_v(url)
+           print(f"Первый тег, начинающийся с 'v': {release_tag}")
+          
       - name: Check if release exists in your repo
         id: check_release
         run: |
