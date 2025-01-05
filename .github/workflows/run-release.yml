@@ -39,7 +39,7 @@ jobs:
                   # Извлекаем имя тега
                   release_name = release_tag.get_text(strip=True)
                   print(f'Первый тег релиза: {release_name}')
-                  print(f'RELEASE_TAG={release_name}' >> $GITHUB_ENV)  # Передаем переменную окружения для последующих шагов
+                  print(f'RELEASE_TAG={release_name}' >> $GITHUB_ENV)              
               else:
                   print('Тег релиза не найден.')
                   exit(1)
