@@ -19,23 +19,22 @@ jobs:
         run: |
           pip install requests beautifulsoup4
           RELEASE_TAG=$(python -c "
-import requests
-from bs4 import BeautifulSoup
-import re
+          import requests
+          from bs4 import BeautifulSoup
+           import re
 
-url = 'https://github.com/immortalwrt/immortalwrt/tags'
-response = requests.get(url)
-soup = BeautifulSoup(response.text, 'html.parser')
+          url = 'https://github.com/immortalwrt/immortalwrt/tags'
+          response = requests.get(url)
+          soup = BeautifulSoup(response.text, 'html.parser')
 
-first_tag = soup.find('a', {'class': 'Link--primary', 'href': re.compile(r'^/immortalwrt/immortalwrt/releases/tag/v\d+\.\d+\.\d+')})
+          first_tag = soup.find('a', {'class': 'Link--primary', 'href': re.compile(r'^/immortalwrt/immortalwrt/releases/tag/v\d+\.\d+\.\d+')})
 
-if first_tag:
-    print(first_tag.text.strip())
-else:
-    print('Тег не найден')
-")
+          if first_tag:
+           print(first_tag.text.strip())
+          else:
+            print('Тег не найден')
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
-
+        
       # Шаг 3: Проверка, существует ли релиз в репозитории
       - name: Check if release exists in your repo
         id: check_release
