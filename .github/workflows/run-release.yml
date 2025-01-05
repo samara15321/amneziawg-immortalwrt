@@ -18,7 +18,7 @@ jobs:
         id: get_release
         run: |
           pip install requests beautifulsoup4
-          RELEASE_TAG=$(python -c "
+          RELEASE_TAG=$(python -c
           import requests
           from bs4 import BeautifulSoup
            import re
