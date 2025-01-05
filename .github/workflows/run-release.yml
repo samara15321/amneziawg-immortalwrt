@@ -15,7 +15,7 @@ jobs:
       - name: Get the latest release from OpenWRT
         id: get_release
         run: |
-           url = "https://github.com/immortalwrt/immortalwrt/tags"
+           curl "https://github.com/immortalwrt/immortalwrt/tags"
            release_tag = get_first_tag_starting_with_v(url)
            print(f"Первый тег, начинающийся с 'v': {release_tag}")
           
