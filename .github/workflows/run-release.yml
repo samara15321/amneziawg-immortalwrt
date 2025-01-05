@@ -18,7 +18,7 @@ jobs:
         id: get_release
         run: |
           pip install requests beautifulsoup4
-          python -c "
+          release_tag=$(python -c "
           import requests
           from bs4 import BeautifulSoup
 
@@ -27,30 +27,32 @@ jobs:
                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36'
               }
     
-              # Отправляем запрос к странице
-              response = requests.get(url, headers=headers)
-              if response.status_code == 200:
+            # Отправляем запрос к странице
+             response = requests.get(url, headers=headers)
+             if response.status_code == 200:
                    # Парсим HTML
                    soup = BeautifulSoup(response.content, 'html.parser')
         
                    # Находим первый тег в списке тегов
                    release_tag = soup.find('a', {'class': 'd-inline-block'})
-              if release_tag:
-                  # Извлекаем имя тега
-                  release_name = release_tag.get_text(strip=True)
-                  print(f'Первый тег релиза: {release_name}')
-                  print(f'RELEASE_TAG={release_name}' >> $GITHUB_ENV)              
-              else:
-                  print('Тег релиза не найден.')
-                  exit(1)
-              else:
-                  print(f'Ошибка при получении страницы: {response.status_code}')
-              exit(1)
+             if release_tag:
+                   # Извлекаем имя тега
+                   release_name = release_tag.get_text(strip=True)
+                   return release_name
+             else:
+                  return None
+             else:
+                 return None
 
-              # Указываем ссылку на страницу с тегами
-               url = 'https://github.com/immortalwrt/immortalwrt/tags'
-               get_first_release_tag(url)
-               "
+            # Указываем ссылку на страницу с тегами
+            url = 'https://github.com/immortalwrt/immortalwrt/tags'
+            tag = get_first_release_tag(url)
+            if tag:
+                  print(tag)
+            else:
+                 print('Тег релиза не найден.')
+            ")
+                 echo "RELEASE_TAG=$release_tag" >> $GITHUB_ENV
 
       # Шаг 3: Проверка, существует ли релиз в репозитории
       - name: Check if release exists in your repo
