@@ -13,48 +13,45 @@ jobs:
       - name: Checkout your repo
         uses: actions/checkout@v2
 
-    # Шаг 2: Извлечение тега релиза
+      # Шаг 2: Извлечение тега релиза
       - name: Extract release tag
         id: get_release
         run: |
-         python -c "
-         import requests
-         from bs4 import BeautifulSoup
+          pip install requests beautifulsoup4
+          python -c "
+          import requests
+          from bs4 import BeautifulSoup
           
-        def get_release_tag_between_toggle_and_quote(url):
-         headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-        soup = BeautifulSoup(response.content, 'html.parser')
+          def get_release_tag_between_toggle_and_quote(url):
+              headers = {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0.4472.124 Safari/537.36'
+              }
+              response = requests.get(url, headers=headers)
+              if response.status_code == 200:
+                  soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Поиск кнопки с id, начинающимся с 'toggle-commit-'
-        button = soup.find('button', id=lambda x: x and x.startswith('toggle-commit-'))
-        if button:
-            button_id = button['id']
-            # Извлекаем значение между 'toggle-commit-' и кавычкой
-            release_tag = button_id[len('toggle-commit-'):].split('\"')[0]
-            print(f'Release Tag: {release_tag}')
-            # Установка переменной окружения для передачи данных между шагами
-            echo "release_tag=${release_tag}" >> $GITHUB_ENV
-        else:
-            print('Кнопка не найдена.')
-            exit(1)
-    else:
-        print(f'Ошибка запроса: {response.status_code}')
-        exit(1)
+                  button = soup.find('button', id=lambda x: x and x.startswith('toggle-commit-'))
+                  if button:
+                      button_id = button['id']
+                      release_tag = button_id[len('toggle-commit-'):].split('\"')[0]
+                      print(f'Release Tag: {release_tag}')
+                      print(f'RELEASE_TAG={release_tag}' >> $GITHUB_ENV)
+                  else:
+                      print('Кнопка не найдена.')
+                      exit(1)
+              else:
+                  print(f'Ошибка запроса: {response.status_code}')
+                  exit(1)
 
-# Пример использования
-url = 'https://github.com/immortalwrt/immortalwrt/tags'  # Укажи нужный URL
-get_release_tag_between_toggle_and_quote(url)
-"
+          url = 'https://github.com/immortalwrt/immortalwrt/tags'
+          get_release_tag_between_toggle_and_quote(url)
+          "
 
       # Шаг 3: Проверка, существует ли релиз в репозитории
       - name: Check if release exists in your repo
         id: check_release
         run: |
-          curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .tag_name || echo "Not found"
+          curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.RELEASE_TAG }} | jq -r .tag_name || echo "Not found"
 
       # Шаг 4: Создание релиза, если он не найден
       - name: Create release in your repo
@@ -67,13 +64,13 @@ get_release_tag_between_toggle_and_quote(url)
           |_______||   __|_____|__|__||________||__|  |____|
                     |__| A M N E Z I A   W I R E G U A R D
           -----------------------------------------------------
-          OpenWrt ${{ env.release_tag }}
+          OpenWrt ${{ env.RELEASE_TAG }}
           -----------------------------------------------------"
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
-              "tag_name": "'${{ env.release_tag }}'",
-              "name": "Build amnezia wg for all devices with openwrt '${{ env.release_tag }}'",
-              "body": "'"${ART}"'\n\nAutomatically created release for OpenWRT '${{ env.release_tag }}'."
+              "tag_name": "'${{ env.RELEASE_TAG }}'",
+              "name": "Build amnezia wg for all devices with openwrt '${{ env.RELEASE_TAG }}'",
+              "body": "'"${ART}"'\n\nAutomatically created release for OpenWRT '${{ env.RELEASE_TAG }}'."
             }'
