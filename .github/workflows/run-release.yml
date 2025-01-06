@@ -18,9 +18,8 @@ jobs:
       - name: Get the latest release from OpenWRT
         id: get_release
         run: |
-          curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags > latest_release.json
-          NAME=$(jq -r .tag_name latest_release.json)
-          NAME=$(jq -r .name latest_release.json)
+          curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags > release.json
+          NAME=$(jq -r .name release.json)
           echo "::set-output name=name::$RELEASE_TAG"
           echo "::set-output name=name::$RELEASE_NAME"
 
