@@ -1,5 +1,5 @@
 {
-  "name": "awg-openwrt",
+  "name": "awg-immortalwrt",
   "version": "1.0.0",
   "description": "Amnezia Wireguard packages for OpenWRT",
   "main": "index.js",
