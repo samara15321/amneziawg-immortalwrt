@@ -8,6 +8,9 @@ on:
 jobs:
   sync-releases:
     runs-on: ubuntu-latest
+    outputs:
+      release_exists: ${{ steps.check_release.outputs.release_exists }}
+      release_tag: ${{ steps.get_release.outputs.release_tag }}
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
@@ -17,9 +20,10 @@ jobs:
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
-          echo "RELEASE_TAG=$RELEASE_TAG"  # Для отладки
         env:
-          RELEASE_TAG: ${{ steps.get_release.outputs.RELEASE_TAG }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        outputs:
+          release_tag: ${{ env.RELEASE_TAG }}
 
       - name: Check if release exists in your repo
         id: check_release
@@ -31,30 +35,32 @@ jobs:
             echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
           fi
         env:
-          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          RELEASE_TAG: ${{ steps.get_release.outputs.release_tag }}
+        outputs:
+          release_exists: ${{ env.RELEASE_EXISTS }}
 
       - name: Create release in your repo
-        if: env.RELEASE_EXISTS == 'false'
+        if: steps.check_release.outputs.release_exists == 'false'
         run: |
           ART="
           \`\`\`
               A M N E Z I A   W I R E G U A R D
           -----------------------------------------------------
-          immortalwrt ${{ env.RELEASE_TAG }}
+          immortalwrt ${{ steps.get_release.outputs.release_tag }}
           -----------------------------------------------------
           \`\`\`"
 
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "$(jq -n --arg tag "${{ env.RELEASE_TAG }}" \
-                    --arg name "amneziawg for immortalwrt ${{ env.RELEASE_TAG }}" \
+            -d "$(jq -n --arg tag "${{ steps.get_release.outputs.release_tag }}" \
+                    --arg name "amneziawg for immortalwrt ${{ steps.get_release.outputs.release_tag }}" \
                     --arg body "$ART" \
                     '{ tag_name: $tag, name: $name, body: $body }')"
 
   run-build:
     needs: sync-releases
-    if: ${{ env.RELEASE_EXISTS == 'false' }}
+    if: needs.sync-releases.outputs.release_exists == 'false'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
-      tag_name: ${{ env.RELEASE_TAG }}
+      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
