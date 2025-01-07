@@ -43,22 +43,31 @@ jobs:
       - name: Check missing build artifacts
         id: check_artifacts
         run: |
+          # Убираем фатальное завершение скрипта на случай ошибок
+          set +e
           MISSING_BUILDS=()
-          CONFIG=$(node sync_index.js "${{ steps.get_release.outputs.release_tag }}") # Использование вывода шага
+          CONFIG=$(node sync_index.js "${{ steps.get_release.outputs.release_tag }}")
+          echo "Release config: $CONFIG"
           for BUILD in $(echo $CONFIG | jq -c '.[]'); do
             PKGARCH=$(echo $BUILD | jq -r '.pkgarch')
             TARGET=$(echo $BUILD | jq -r '.target')
             SUBTARGET=$(echo $BUILD | jq -r '.subtarget')
             ARTIFACT_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ steps.get_release.outputs.release_tag }}/kmod-amneziawg_${{ steps.get_release.outputs.release_tag }}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
-            if ! curl --head --silent --fail $ARTIFACT_URL > /dev/null; then
-               MISSING_BUILDS+=("${PKGARCH}_${TARGET}_${SUBTARGET}")
+            echo "Checking artifact: $ARTIFACT_URL"
+            if ! curl --head --silent --fail "$ARTIFACT_URL" > /dev/null; then
+              echo "Missing artifact: $ARTIFACT_URL"
+              MISSING_BUILDS+=("${PKGARCH}_${TARGET}_${SUBTARGET}")
+            else
+              echo "Found artifact: $ARTIFACT_URL"
             fi
           done
-            if  [ ${#MISSING_BUILDS[@]} -eq 0 ]; then
-              echo "missing_builds=none" >> $GITHUB_ENV
-           else
-              echo "missing_builds=$(IFS=','; echo "${MISSING_BUILDS[*]}")" >> $GITHUB_ENV
-           fi
+          if [ ${#MISSING_BUILDS[@]} -eq 0 ]; then
+            echo "No missing builds"
+            echo "missing_builds=none" >> $GITHUB_ENV
+          else
+            echo "Missing builds: ${MISSING_BUILDS[*]}"
+            echo "missing_builds=$(IFS=','; echo "${MISSING_BUILDS[*]}")" >> $GITHUB_ENV
+          fi
 
       - name: Create release if not exists
         if: env.release_exists == 'false'
