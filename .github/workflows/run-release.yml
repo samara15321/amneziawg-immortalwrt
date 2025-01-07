@@ -29,7 +29,6 @@ jobs:
         run: |
            RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
            echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-           echo "::set-output name=release_tag::$RELEASE_TAG"
 
       - name: Check if release exists in your repo
         id: check_release
@@ -52,15 +51,15 @@ jobs:
             SUBTARGET=$(echo $BUILD | jq -r '.subtarget')
             ARTIFACT_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ steps.get_release.outputs.release_tag }}/kmod-amneziawg_${{ steps.get_release.outputs.release_tag }}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
             if ! curl --head --silent --fail $ARTIFACT_URL > /dev/null; then
-            MISSING_BUILDS+=("${PKGARCH}_${TARGET}_${SUBTARGET}")
+               MISSING_BUILDS+=("${PKGARCH}_${TARGET}_${SUBTARGET}")
             fi
           done
-          if [ ${#MISSING_BUILDS[@]} -eq 0 ]; then
-            echo "missing_builds=none" >> $GITHUB_ENV
-          else
-            echo "missing_builds=${MISSING_BUILDS[*]}" >> $GITHUB_ENV
-          fi
-    
+            if  [ ${#MISSING_BUILDS[@]} -eq 0 ]; then
+              echo "missing_builds=none" >> $GITHUB_ENV
+           else
+              echo "missing_builds=$(IFS=','; echo "${MISSING_BUILDS[*]}")" >> $GITHUB_ENV
+           fi
+
       - name: Create release if not exists
         if: env.release_exists == 'false'
         run: |
