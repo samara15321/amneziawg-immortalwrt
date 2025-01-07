@@ -39,19 +39,19 @@ jobs:
           else
             echo "release_exists=true" >> $GITHUB_ENV
           fi
-          
+
       - name: Check missing build artifacts
         id: check_artifacts
         run: |
           MISSING_BUILDS=()
-          CONFIG=$(node sync_index.js ${{ env.release_tag }}) # Передача переменной версии
+          CONFIG=$(node sync_index.js "${{ steps.get_release.outputs.release_tag }}") # Использование вывода шага
           for BUILD in $(echo $CONFIG | jq -c '.[]'); do
             PKGARCH=$(echo $BUILD | jq -r '.pkgarch')
             TARGET=$(echo $BUILD | jq -r '.target')
             SUBTARGET=$(echo $BUILD | jq -r '.subtarget')
-            ARTIFACT_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ env.release_tag }}/kmod-amneziawg_${{ env.release_tag }}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
+            ARTIFACT_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ steps.get_release.outputs.release_tag }}/kmod-amneziawg_${{ steps.get_release.outputs.release_tag }}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
             if ! curl --head --silent --fail $ARTIFACT_URL > /dev/null; then
-              MISSING_BUILDS+=("${PKGARCH}_${TARGET}_${SUBTARGET}")
+            MISSING_BUILDS+=("${PKGARCH}_${TARGET}_${SUBTARGET}")
             fi
           done
           if [ ${#MISSING_BUILDS[@]} -eq 0 ]; then
@@ -59,8 +59,7 @@ jobs:
           else
             echo "missing_builds=${MISSING_BUILDS[*]}" >> $GITHUB_ENV
           fi
-
-          
+    
       - name: Create release if not exists
         if: env.release_exists == 'false'
         run: |
