@@ -16,6 +16,14 @@ jobs:
       - name: Checkout your repo
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+
+      - name: Install dependencies
+        run: npm install axios cheerio @actions/core
+
       - name: Get the latest release from OpenWRT
         id: get_release
         run: |
@@ -51,7 +59,7 @@ jobs:
           else
             echo "missing_builds=${MISSING_BUILDS[*]}" >> $GITHUB_ENV
           fi
-
+          
       - name: Create release if not exists
         if: env.release_exists == 'false'
         run: |
