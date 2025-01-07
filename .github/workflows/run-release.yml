@@ -1,4 +1,4 @@
-name: Auto_Sync OpenWRT Releases
+name: Auto_Sync immortalwrt Releases
 
 on:
   schedule:
