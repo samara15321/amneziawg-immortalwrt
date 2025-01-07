@@ -29,6 +29,8 @@ jobs:
         run: |
            RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
            echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+           echo "::set-output name=release_tag::$RELEASE_TAG"
+           echo "DEBUG: Release tag from ImmortalWrt: $RELEASE_TAG"
 
       - name: Check if release exists in your repo
         id: check_release
@@ -43,31 +45,30 @@ jobs:
       - name: Check missing build artifacts
         id: check_artifacts
         run: |
-          # Убираем фатальное завершение скрипта на случай ошибок
-          set +e
+          set -e
           MISSING_BUILDS=()
           CONFIG=$(node sync_index.js "${{ steps.get_release.outputs.release_tag }}")
+          if [ -z "$CONFIG" ]; then
+            echo "Error: Sync index returned no configuration."
+            exit 1
+          fi
           echo "Release config: $CONFIG"
-          for BUILD in $(echo $CONFIG | jq -c '.[]'); do
+          for BUILD in $(echo "$CONFIG" | jq -c '.[]'); do
             PKGARCH=$(echo $BUILD | jq -r '.pkgarch')
             TARGET=$(echo $BUILD | jq -r '.target')
             SUBTARGET=$(echo $BUILD | jq -r '.subtarget')
             ARTIFACT_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ steps.get_release.outputs.release_tag }}/kmod-amneziawg_${{ steps.get_release.outputs.release_tag }}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
-            echo "Checking artifact: $ARTIFACT_URL"
             if ! curl --head --silent --fail "$ARTIFACT_URL" > /dev/null; then
-              echo "Missing artifact: $ARTIFACT_URL"
               MISSING_BUILDS+=("${PKGARCH}_${TARGET}_${SUBTARGET}")
-            else
-              echo "Found artifact: $ARTIFACT_URL"
             fi
           done
           if [ ${#MISSING_BUILDS[@]} -eq 0 ]; then
-            echo "No missing builds"
             echo "missing_builds=none" >> $GITHUB_ENV
           else
-            echo "Missing builds: ${MISSING_BUILDS[*]}"
             echo "missing_builds=$(IFS=','; echo "${MISSING_BUILDS[*]}")" >> $GITHUB_ENV
           fi
+        env:
+           release_tag: ${{ steps.get_release.outputs.release_tag }}
 
       - name: Create release if not exists
         if: env.release_exists == 'false'
