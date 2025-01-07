@@ -1,4 +1,4 @@
-name: Build AmneziaWG for snapshot OpenWRT
+name: Build AmneziaWG for snapshot
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
