@@ -37,9 +37,9 @@ jobs:
         run: |
           ART="
           \`\`\`
-                    A M N E Z I A   W I R E G U A R D
+                     A M N E Z I A   W I R E G U A R D
           -----------------------------------------------------
-          immortalwrt ${{ steps.get_release.outputs.release_tag }}
+                     ImmortalWrt ${{ steps.get_release.outputs.release_tag }}
           -----------------------------------------------------
           \`\`\`"
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
