@@ -40,8 +40,11 @@ jobs:
       matrix:
         build_env: ${{ fromJson(needs.generate-config.outputs.job-config) }}
       fail-fast: false
+      
+    steps: 
+      - name: Debug output
+        run: echo "${{ needs.generate-config.outputs.job-config }}"
 
-    steps:
       - name: Check if release file exists
         id: check_release
         run: |
