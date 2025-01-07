@@ -5,28 +5,22 @@ const core = require('@actions/core');
 let version = process.argv[2];
 
 if (version) {
-    version = version.slice(1);
-    console.log(`Версия без первого символа: ${version}`);
+  version = version.slice(1); // Удаление первого символа (например, 'v' или '/')
+  console.log(`Версия без первого символа: ${version}`);
 } else {
-    console.log('Версия не была передана');
-}
-
-const SNAPSHOT_TARGETS_TO_BUILD = ['mediatek', 'ramips', 'x86', 'armsr'];
-const SNAPSHOT_SUBTARGETS_TO_BUILD = ['filogic', 'mt7622', 'mt7623', 'mt7629', 'mt7620', 'mt7621', 'mt76x8', '64', 'generic', 'armv8'];
-
-if (!version) {
+  console.log('Версия не была передана');
   core.setFailed('Version argument is required');
   process.exit(1);
 }
 
-const url = version === 'SNAPSHOT' ? 'https://downloads.immortalwrt.org/snapshots/targets/' : `https://downloads.immortalwrt.org/releases/${version}/targets/`;
+const url = `https://downloads.immortalwrt.org/releases/${version}/targets/`;
 
 async function fetchHTML(url) {
   try {
     const { data } = await axios.get(url);
     return cheerio.load(data);
   } catch (error) {
-    console.error(`Error fetching HTML for ${url}: ${error}`);
+    console.error(`Error fetching HTML for ${url}: ${error.message}`);
     throw error;
   }
 }
@@ -84,16 +78,13 @@ async function main() {
       const subtargets = await getSubtargets(target);
       for (const subtarget of subtargets) {
         const { vermagic, pkgarch } = await getDetails(target, subtarget);
-
-        if (version !== 'SNAPSHOT' || (SNAPSHOT_SUBTARGETS_TO_BUILD.includes(subtarget) && SNAPSHOT_TARGETS_TO_BUILD.includes(target))) {
-          jobConfig.push({
-            tag: version,
-            target,
-            subtarget,
-            vermagic,
-            pkgarch,
-          });
-        }
+        jobConfig.push({
+          tag: version,
+          target,
+          subtarget,
+          vermagic,
+          pkgarch,
+        });
       }
     }
 
