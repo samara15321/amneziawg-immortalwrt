@@ -1,5 +1,4 @@
-name: Auto_Build Release on Tag
-
+name: Auto_Build Sync_Releases
 on:
   workflow_call:
     inputs:
