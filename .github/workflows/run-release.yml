@@ -27,8 +27,9 @@ jobs:
       - name: Get the latest release from OpenWRT
         id: get_release
         run: |
-          RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
+           echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+           echo "::set-output name=release_tag::$RELEASE_TAG"
 
       - name: Check if release exists in your repo
         id: check_release
