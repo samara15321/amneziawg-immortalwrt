@@ -39,12 +39,12 @@ jobs:
           else
             echo "release_exists=true" >> $GITHUB_ENV
           fi
-
+          
       - name: Check missing build artifacts
         id: check_artifacts
         run: |
           MISSING_BUILDS=()
-          CONFIG=$(node sync_index.js ${{ env.release_tag }})
+          CONFIG=$(node sync_index.js ${{ env.release_tag }}) # Передача переменной версии
           for BUILD in $(echo $CONFIG | jq -c '.[]'); do
             PKGARCH=$(echo $BUILD | jq -r '.pkgarch')
             TARGET=$(echo $BUILD | jq -r '.target')
@@ -59,6 +59,7 @@ jobs:
           else
             echo "missing_builds=${MISSING_BUILDS[*]}" >> $GITHUB_ENV
           fi
+
           
       - name: Create release if not exists
         if: env.release_exists == 'false'
