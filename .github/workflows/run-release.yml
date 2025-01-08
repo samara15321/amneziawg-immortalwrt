@@ -63,25 +63,6 @@ jobs:
           outputs:
           missing_builds: ${{ env.MISSING_BUILDS }}
 
-      - name: Create release if not exists
-        if: env.release_exists == 'false'
-        run: |
-          ART="
-          \`\`\`
-                   A M N E Z I A   W I R E G U A R D
-          -----------------------------------------------------
-                   ImmortalWrt ${{ env.release_tag }}
-          -----------------------------------------------------
-          \`\`\`"
-          curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "tag_name": "${{ env.release_tag }}",
-                "name": "ImmortalWrt ${{ env.release_tag }}",
-                "body": "'"${ART//\"/\\\"}"'"
-              }'
-
   run-build:
     needs: sync-releases
     if: needs.sync-releases.outputs.missing_builds != 'none'
