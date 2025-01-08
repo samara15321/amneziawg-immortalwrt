@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_exists: ${{ steps.check_release.outputs.release_exists }}
+      missing_builds: ${{ steps.check_artifacts.outputs.missing_builds }}
       release_tag: ${{ steps.get_release.outputs.release_tag }}
     steps:
       - name: Checkout your repo
@@ -19,7 +20,7 @@ jobs:
         id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
 
       - name: Check if release exists in your repo
         id: check_release
@@ -31,7 +32,30 @@ jobs:
             echo "release_exists=true" >> $GITHUB_ENV
           fi
 
-      - name: Create release in your repo
+      - name: Check missing build artifacts
+        id: check_artifacts
+        run: |
+          MISSING_BUILDS=()
+          CONFIG=$(node sync_index.js ${{ env.release_tag }})
+          for BUILD in $(echo $CONFIG | jq -c '.[]'); do
+            PKGARCH=$(echo $BUILD | jq -r '.pkgarch')
+            TARGET=$(echo $BUILD | jq -r '.target')
+            SUBTARGET=$(echo $BUILD | jq -r '.subtarget')
+            ARTIFACT_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ env.release_tag }}/kmod-amneziawg_${{ env.release_tag }}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
+            if ! curl --head --silent --fail $ARTIFACT_URL > /dev/null; then
+              MISSING_BUILDS+=("${PKGARCH}_${TARGET}_${SUBTARGET}")
+            fi
+          done
+          if [ ${#MISSING_BUILDS[@]} -eq 0 ]; then
+            echo "missing_builds=none" >> $GITHUB_ENV
+          else
+            MISSING_BUILDS_STR=$(IFS=","; echo "${MISSING_BUILDS[*]}")
+            echo "MISSING_BUILDS=$MISSING_BUILDS_STR" >> $GITHUB_ENV
+          fi
+          outputs:
+          missing_builds: ${{ env.MISSING_BUILDS }}
+
+      - name: Create release if not exists
         if: env.release_exists == 'false'
         run: |
           ART="
@@ -52,7 +76,13 @@ jobs:
 
   run-build:
     needs: sync-releases
-    if: needs.sync-releases.outputs.release_exists == 'false'
-    uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
-    with:
-      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
+    if: needs.sync-releases.outputs.missing_builds != 'none'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup and Run
+        run: |
+          MISSING_BUILDS="${{ needs.sync-releases.outputs.missing_builds }}"
+          for BUILD in $(echo $MISSING_BUILDS | tr ',' '\n'); do
+            IFS="_" read -r PKGARCH TARGET SUBTARGET <<< "$BUILD"
+            ./build_script.sh --pkgarch "$PKGARCH" --target "$TARGET" --subtarget "$SUBTARGET"
+          done
