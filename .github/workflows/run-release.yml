@@ -10,27 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_exists: ${{ steps.check_release.outputs.release_exists }}
-      missing_builds: ${{ steps.check_artifacts.outputs.missing_builds }}
       release_tag: ${{ steps.get_release.outputs.release_tag }}
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.18.1'
-
-      - name: Install dependencies
-        run: npm install axios cheerio @actions/core
-
       - name: Get the latest release from OpenWRT
         id: get_release
         run: |
-           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-           echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-           echo "::set-output name=release_tag::$RELEASE_TAG"
-           echo "DEBUG: Release tag from ImmortalWrt: $RELEASE_TAG"
+          RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
 
       - name: Check if release exists in your repo
         id: check_release
@@ -42,35 +31,7 @@ jobs:
             echo "release_exists=true" >> $GITHUB_ENV
           fi
 
-      - name: Check missing build artifacts
-        id: check_artifacts
-        run: |
-          set -e
-          MISSING_BUILDS=()
-          CONFIG=$(node sync_index.js "${{ steps.get_release.outputs.release_tag }}")
-          if [ -z "$CONFIG" ]; then
-            echo "Error: Sync index returned no configuration."
-            exit 1
-          fi
-          echo "Release config: $CONFIG"
-          for BUILD in $(echo "$CONFIG" | jq -c '.[]'); do
-            PKGARCH=$(echo $BUILD | jq -r '.pkgarch')
-            TARGET=$(echo $BUILD | jq -r '.target')
-            SUBTARGET=$(echo $BUILD | jq -r '.subtarget')
-            ARTIFACT_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ steps.get_release.outputs.release_tag }}/kmod-amneziawg_${{ steps.get_release.outputs.release_tag }}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
-            if ! curl --head --silent --fail "$ARTIFACT_URL" > /dev/null; then
-              MISSING_BUILDS+=("${PKGARCH}_${TARGET}_${SUBTARGET}")
-            fi
-          done
-          if [ ${#MISSING_BUILDS[@]} -eq 0 ]; then
-            echo "missing_builds=none" >> $GITHUB_ENV
-          else
-            echo "missing_builds=$(IFS=','; echo "${MISSING_BUILDS[*]}")" >> $GITHUB_ENV
-          fi
-        env:
-           release_tag: ${{ steps.get_release.outputs.release_tag }}
-
-      - name: Create release if not exists
+      - name: Create release in your repo
         if: env.release_exists == 'false'
         run: |
           ART="
@@ -91,7 +52,7 @@ jobs:
 
   run-build:
     needs: sync-releases
-    if: needs.sync-releases.outputs.missing_builds != 'none'
+    if: needs.sync-releases.outputs.release_exists == 'false'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
       tag_name: ${{ needs.sync-releases.outputs.release_tag }}
