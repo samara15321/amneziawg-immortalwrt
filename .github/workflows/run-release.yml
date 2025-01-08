@@ -63,15 +63,30 @@ jobs:
           outputs:
           missing_builds: ${{ env.MISSING_BUILDS }}
 
-  run-build:
-    needs: sync-releases
-    if: needs.sync-releases.outputs.missing_builds != 'none'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup and Run
+run-build:
+   needs: sync-releases
+   if: needs.sync-releases.outputs.missing_builds != 'none'
+   runs-on: ubuntu-latest
+   steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Builds for Missing Artifacts
         run: |
-          MISSING_BUILDS="${{ needs.sync-releases.outputs.missing_builds }}"
-          for BUILD in $(echo $MISSING_BUILDS | tr ',' '\n'); do
+          echo "Missing builds: ${{ needs.sync-releases.outputs.missing_builds }}"
+          if [[ "${{ needs.sync-releases.outputs.missing_builds }}" == "none" || -z "${{ needs.sync-releases.outputs.missing_builds }}" ]]; then
+            echo "No missing builds. Skipping..."
+            exit 0
+          fi
+
+          # Разбиваем строку на массив и обрабатываем каждый build
+          for BUILD in $(echo ${{ needs.sync-releases.outputs.missing_builds }} | tr ',' '\n'); do
             IFS="_" read -r PKGARCH TARGET SUBTARGET <<< "$BUILD"
+            echo "Processing BUILD: $PKGARCH - $TARGET - $SUBTARGET"
             ./build_script.sh --pkgarch "$PKGARCH" --target "$TARGET" --subtarget "$SUBTARGET"
           done
