@@ -185,22 +185,30 @@ jobs:
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg_*.ipk awgrelease/luci-app-amneziawg_${postfix}.ipk
           cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg_*.ipk awgrelease/kmod-amneziawg_${postfix}.ipk
+
       - name: Check if release exists
         id: check_release
         run: |
           RELEASE_TAG=${{ inputs.tag_name }}
-          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/$RELEASE_TAG)
-          if [[ "$RELEASE_EXISTS" == *"Not Found"* ]]; then
+          
+          # Получаем данные о релизе
+          RESPONSE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/$RELEASE_TAG)
+          
+          # Проверка, если релиз не найден
+          if echo "$RESPONSE" | jq -e '.message == "Not Found"' > /dev/null; then
             echo "Release does not exist, skipping deletion"
             echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
           else
             echo "Release exists, deleting old assets"
             echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
-            # Получаем ID релиза, чтобы удалить его артефакты
-            RELEASE_ID=$(echo "$RELEASE_EXISTS" | jq -r '.[0].id')
+
+            # Получаем ID релиза
+            RELEASE_ID=$(echo "$RESPONSE" | jq -r '.[0].id')
             echo "Release ID: $RELEASE_ID"
+            
             # Получаем список артефактов релиза
             ASSETS=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets)
+            
             # Удаляем все старые файлы
             for asset in $(echo "$ASSETS" | jq -r '.[].id'); do
               curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
