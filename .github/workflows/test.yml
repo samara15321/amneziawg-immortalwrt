@@ -35,6 +35,25 @@ jobs:
             echo "release_exists=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Generate Job Config
+        id: generate-config
+        run: node sync_index.js ${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run sync_index.js to set build environment variables
+        run: |
+          # Убедитесь, что sync_index.js доступен
+          node path/to/sync_index.js
+          # Экспортируем нужные данные как переменные окружения
+          echo "pkgarch=$(node -e 'require(\"./path/to/sync_index.js\").getPkgArch()')" >> $GITHUB_ENV
+          echo "target=$(node -e 'require(\"./path/to/sync_index.js\").getTarget()')" >> $GITHUB_ENV
+          echo "subtarget=$(node -e 'require(\"./path/to/sync_index.js\").getSubtarget()')" >> $GITHUB_ENV
+          echo "vermagic=$(node -e 'require(\"./path/to/sync_index.js\").getVermagic()')" >> $GITHUB_ENV
+
       - name: Check for missing packages in the release
         id: check_missing_packages
         run: |
@@ -48,7 +67,8 @@ jobs:
     
                  for PACKAGE in "${PACKAGES[@]}"; do
                    # Формируем имя пакета по шаблону
-                   PACKAGE_FILE="${PACKAGE}_${{ env.release_tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}_${{ matrix.build_env.vermagic }}.ipk"
+                    PACKAGE_FILE="${PACKAGE}_${{ env.release_tag }}_${{ env.pkgarch }}_${{ env.target }}_${{ env.subtarget }}_${{ env.vermagic }}.ipk"
+                    echo "PACKAGE_FILE: $PACKAGE_FILE"
       
                    # Выполняем запрос к API для получения списка активов релиза
                    PACKAGE_EXISTS=$(echo "$RESPONSE" | jq -r ".assets | .[].name" | grep -E "\b$PACKAGE_FILE\b")
