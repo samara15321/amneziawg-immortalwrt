@@ -70,11 +70,11 @@ jobs:
           FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/v${{ matrix.build_env.tag }}/amneziawg-tools_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
           
           echo "Checking if file exists: $FILE_URL"
-          if curl --head --silent --fail $FILE_URL; then
-            echo "Build with vermagic $VERMAGIC_EXPECTED already exists. Skipping build."
-            exit 0
+          if curl --head --silent --fail -L $FILE_URL; then
+             echo "Build with vermagic $VERMAGIC_EXPECTED already exists. Skipping build."
+             exit 0
           else
-            echo "No existing build found for vermagic $VERMAGIC_EXPECTED. Proceeding with build."
+             echo "No existing build found for vermagic $VERMAGIC_EXPECTED. Proceeding with build."
           fi
      
 
@@ -147,7 +147,7 @@ jobs:
         run: |
           tag_name="$v${{ matrix.build_env.tag }}"
           mkdir -p awgrelease
-          postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}_${{ matrix.build_env.vermagic }}"
+          postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg_*.ipk awgrelease/luci-app-amneziawg_${postfix}.ipk
           cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg_*.ipk awgrelease/kmod-amneziawg_${postfix}.ipk
