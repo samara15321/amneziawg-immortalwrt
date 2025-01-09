@@ -77,13 +77,13 @@ jobs:
           
           if curl --silent --head --fail -L "$FILE_URL"; then
               echo "Build already exists. Skipping build."
-              exit 0  # Останавливаем текущий шаг, но не прерываем весь workflow
+              exit 0  # Останавливает только этот текущий шаг, остальные будут продолжать
           else
               echo "No existing build found. Proceeding with build."
           fi
         shell: bash
-        continue-on-error: false  # Останавливает только этот конкретный build при ошибке
-
+        continue-on-error: true  # Не останавливает выполнение других параллельных сборок
+        
       - name: Building kernel and tools
         if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }} fi
         run: |
