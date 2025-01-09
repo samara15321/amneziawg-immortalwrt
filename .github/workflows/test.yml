@@ -48,6 +48,10 @@ jobs:
           # Получаем список активов для указанного тега
           RESPONSE=$(curl -s "https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }}")
 
+          # Отладочный вывод полного ответа от API
+          echo "API response for tag ${{ env.release_tag }}:"
+          echo "$RESPONSE"
+
           # Проверяем, что ответ не пустой и содержит активы
           if echo "$RESPONSE" | jq -e '.assets' > /dev/null; then
             # Выполняем проверку наличия пакета в списке активов
@@ -64,8 +68,6 @@ jobs:
           # Выводим список недостающих пакетов
           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
-
-          echo "$RESPONSE"
 
       - name: Create release in your repo
         if: ${{ env.release_exists == 'false' }}
