@@ -46,7 +46,11 @@ jobs:
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | jq -r '.[].name')
 
           missing=false
-          # Using a run block to handle the loop
+          
+          # Debug step to check the content of job-config
+          echo "Job Config: ${{ needs.generate-config.outputs.job-config }}"
+
+          # Using a run block to handle the loop and fix the fromJson issue
           for combo in $(echo "${{ fromJson(needs.generate-config.outputs.job-config) }}" | jq -r '.[] | "\(.pkgarch)_\(.target)_\(.subtarget)"'); do
             if ! echo "$asset_names" | grep -q "$combo"; then
               missing=true
