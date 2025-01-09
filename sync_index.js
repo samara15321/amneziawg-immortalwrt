@@ -2,7 +2,7 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const core = require('@actions/core');
 
-let version = "${{ env.VERSION }}"
+let version = process.env.RELEASE_TAG;
 
 if (version) {
   version = version.slice(1); // Удаление первого символа (например, 'v' или '/')
