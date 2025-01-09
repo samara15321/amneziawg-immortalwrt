@@ -2,8 +2,8 @@ name: Auto_Sync_and_Build_OpenWRT_Releases
 
 on:
   schedule:
-    - cron: '30 23 */4 * *' # Проверка новых релизов каждый 4 день в 23:30
-  workflow_dispatch: # Возможность вручную запустить Action
+    - cron: '30 23 */4 * *'  # Проверка новых релизов каждый 4 день в 23:30
+  workflow_dispatch:  # Возможность вручную запустить Action
   
 jobs:
   sync-releases:
@@ -49,7 +49,7 @@ jobs:
                 "name": "ImmortalWrt ${{ env.release_tag }}",
                 "body": "'"${ART//\"/\\\"}"'"
               }'
-  
+
   generate-config:
     runs-on: ubuntu-latest
     outputs:
@@ -94,11 +94,17 @@ jobs:
         env:
           VERSION: ${{ env.VERSION }}  # Убедитесь, что вы используете нужное значение
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
   check-build-timestamp:
     runs-on: ubuntu-latest
     needs: generate-config
     steps:
+      - name: Restore build timestamp from cache
+        uses: actions/cache@v4
+        with:
+          path: .last_build_timestamp
+          key: last-build-timestamp-${{ runner.os }}
+
       - name: Check if build timestamp exists
         id: check_timestamp
         run: |
@@ -107,7 +113,7 @@ jobs:
             LAST_BUILD_TIMESTAMP=$(cat $TIMESTAMP_FILE)
             CURRENT_TIME=$(date +%s)
             TIME_DIFF=$((CURRENT_TIME - LAST_BUILD_TIMESTAMP))
-            if [ $TIME_DIFF -le 86400 ]; then # 86400 секунд = 24 часа
+            if [ $TIME_DIFF -le 86400 ]; then  # 86400 секунд = 24 часа
               echo "Last build was within 24 hours. Skipping rebuild."
               exit 0
             fi
@@ -117,6 +123,12 @@ jobs:
       - name: Update build timestamp
         run: |
           echo $(date +%s) > .last_build_timestamp
+
+      - name: Cache build timestamp
+        uses: actions/cache@v4
+        with:
+          path: .last_build_timestamp
+          key: last-build-timestamp-${{ runner.os }}
 
   build:
     name: "v${{ matrix.build_env.tag }} - ${{ matrix.build_env.pkgarch}} :: ${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}} build"
@@ -141,6 +153,8 @@ jobs:
         with:
           path: "**"
           key: ${{ runner.os }}-build-vm4-${{ env.cache-name }}
+
+      # Добавьте шаги для сборки ядра и инструментов, которые у вас уже есть
 
       - name: Building kernel and tools
         run: |
