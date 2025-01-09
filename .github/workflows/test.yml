@@ -20,6 +20,7 @@ jobs:
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+
       - name: Check if release exists in your repo
         id: check_release
         run: |
@@ -29,6 +30,7 @@ jobs:
           else
             echo "release_exists=true" >> $GITHUB_ENV
           fi
+
       - name: Create release in your repo
         if: env.release_exists == 'false'
         run: |
@@ -47,15 +49,34 @@ jobs:
                 "name": "ImmortalWrt ${{ env.release_tag }}",
                 "body": "'"${ART//\"/\\\"}"'"
               }'
-      
+  
   generate-config:
     runs-on: ubuntu-latest
     outputs:
-     job-config: ${{ steps.generate-config.outputs.job-config }}
-     release_tag: ${{ steps.get_version.outputs.VERSION }}  # Исправить сюда!
+      job-config: ${{ steps.generate-config.outputs.job-config }}
+      release_tag: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Get the latest release from OpenWRT
+        id: get_release
+        run: |
+          RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+          echo "RELEASE_TAG is: $RELEASE_TAG"
+
+      - name: Get OpenWRT version from tag_name
+        id: get_version
+        run: |
+           echo "VERSION=${{ env.release_tag }}" >> $GITHUB_ENV
+           echo "VERSION is set to: ${{ env.release_tag }}"
+
+      - name: Debug tag_name
+        run: |
+          echo "Debugging VERSION..."
+          echo "VERSION is: ${{ env.VERSION }}"
+          echo "Release Tag (from ENV): ${{ env.release_tag }}"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -65,22 +86,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Get OpenWRT version from tag_name
-        id: get_version
-        run: |
-           echo "VERSION=${{ inputs.tag_name }}" >> $GITHUB_ENV
-      - name: Debug tag_name
-        run: |
-            echo "VERSION is: ${{ env.VERSION }}"
       - name: Generate Job Config
         id: generate-config
         run: |
-          node sync_index.js ${{ inputs.tag_name }}  # Pass the correct input to the script
+          # Передаём переменную VERSION, чтобы она стала доступна в вашем скрипте
+          node sync_index.js ${VERSION}
         env:
-          VERSION: ${{ inputs.tag_name }}  # Ensure the version is passed as an environment variable
+          VERSION: ${{ env.VERSION }}  # Убедитесь, что вы используете нужное значение
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
+          
   check-build-timestamp:
     runs-on: ubuntu-latest
     needs: generate-config
@@ -99,18 +113,20 @@ jobs:
             fi
           fi
           echo "No recent build or 24 hours have passed. Proceeding with rebuild."
+
       - name: Update build timestamp
         run: |
           echo $(date +%s) > .last_build_timestamp
-  build:
-     name: "v${{ matrix.build_env.tag }} - ${{ matrix.build_env.pkgarch}} :: ${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}} build"
-     runs-on: ubuntu-latest
-     needs: check-build-timestamp
-     strategy:
-      matrix:
-       build_env: ${{ fromJson(needs.generate-config.outputs.job-config) }}
 
-     steps:
+  build:
+    name: "v${{ matrix.build_env.tag }} - ${{ matrix.build_env.pkgarch}} :: ${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}} build"
+    runs-on: ubuntu-latest
+    needs: check-build-timestamp
+    strategy:
+      matrix:
+        build_env: ${{ fromJson(needs.generate-config.outputs.job-config) }}
+
+    steps:
       - uses: actions/checkout@v4
         with:
           repository: immortalwrt/immortalwrt
@@ -158,6 +174,7 @@ jobs:
             echo Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED
             exit 1
           fi
+
       - name: Build AmneziaWG
         run: |
           VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
@@ -174,6 +191,7 @@ jobs:
           make package/luci-app-amneziawg/compile V=s
           make V=s package/amneziawg-tools/{clean,download,prepare}
           make V=s package/amneziawg-tools/compile
+
       - name: Prepare artifacts
         run: |
           tag_name=${{ inputs.tag_name }}
@@ -182,6 +200,7 @@ jobs:
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg_*.ipk awgrelease/luci-app-amneziawg_${postfix}.ipk
           cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg_*.ipk awgrelease/kmod-amneziawg_${postfix}.ipk
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
