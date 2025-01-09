@@ -114,15 +114,15 @@ jobs:
 
       - name: Building kernel and tools
         run: |
-        echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
+         echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
-        # Setup & install feeds
-        wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
+         # Setup & install feeds
+         wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
 
-        # Проверка и добавление строки в feeds.conf, если она ещё не существует
-        if ! grep -q "awg-immortalwrt" ./feeds.conf; then
-          echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
-        fi
+         # Проверка и добавление строки в feeds.conf, если она ещё не существует
+         if ! grep -q "awg-immortalwrt" ./feeds.conf; then
+           echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
+         fi
 
          # Проверим правильность файла перед продолжением
          cat ./feeds.conf
