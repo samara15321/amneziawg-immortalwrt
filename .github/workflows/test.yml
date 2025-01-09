@@ -49,13 +49,16 @@ jobs:
 
       - name: Run sync_index.js to set build environment variables
         run: |
+      - name: Run sync_index.js to set build environment variables
+        run: |
           # Убедитесь, что sync_index.js доступен
-          node path/to/sync_index.js
+          node sync_index.js  # Используйте правильный путь к файлу
           # Экспортируем нужные данные как переменные окружения
-          echo "pkgarch=$(node -e 'require(\"./path/to/sync_index.js\").getPkgArch()')" >> $GITHUB_ENV
-          echo "target=$(node -e 'require(\"./path/to/sync_index.js\").getTarget()')" >> $GITHUB_ENV
-          echo "subtarget=$(node -e 'require(\"./path/to/sync_index.js\").getSubtarget()')" >> $GITHUB_ENV
-          echo "vermagic=$(node -e 'require(\"./path/to/sync_index.js\").getVermagic()')" >> $GITHUB_ENV
+          echo "pkgarch=$(node -e 'require(\"./sync_index.js\").getPkgArch()')" >> $GITHUB_ENV
+          echo "target=$(node -e 'require(\"./sync_index.js\").getTarget()')" >> $GITHUB_ENV
+          echo "subtarget=$(node -e 'require(\"./sync_index.js\").getSubtarget()')" >> $GITHUB_ENV
+          echo "vermagic=$(node -e 'require(\"./sync_index.js\").getVermagic()')" >> $GITHUB_ENV
+
 
       - name: Check for missing packages in the release
         id: check_missing_packages
