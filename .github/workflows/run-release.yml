@@ -47,8 +47,15 @@ jobs:
 
           missing=false
           
-          # Debug step to check the content of job-config
-          echo "Job Config: ${{ needs.generate-config.outputs.job-config }}"
+          # Debug step to check the content of job-config before using it
+          echo "Job Config Output: ${{ needs.generate-config.outputs.job-config }}"
+
+          # Handle the case if the job-config output is empty or malformed
+          if [ -z "${{ needs.generate-config.outputs.job-config }}" ]; then
+            echo "job-config is empty or missing"
+            echo "missing_assets=true" >> $GITHUB_ENV
+            exit 1  # exit if job-config is missing
+          fi
 
           # Using a run block to handle the loop and fix the fromJson issue
           for combo in $(echo "${{ fromJson(needs.generate-config.outputs.job-config) }}" | jq -r '.[] | "\(.pkgarch)_\(.target)_\(.subtarget)"'); do
