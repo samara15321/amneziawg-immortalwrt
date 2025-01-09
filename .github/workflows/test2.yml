@@ -63,29 +63,39 @@ jobs:
       matrix:
        build_env: ${{ fromJson(needs.generate-config.outputs.job-config) }}
 
-     steps:
+     steps:      
+      - name: Check if release file exists
+        id: check_release
+        run: |
+          postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
+          RELEASE_FILE="kmod-amneziawg_${postfix}.ipk"
+          TAG="v${{ matrix.build_env.tag }}"
+
+          echo "Checking for release file: $RELEASE_FILE in release: $TAG"
+
+          # Используем GitHub CLI для проверки наличия файла в релизе
+          if gh release view "$TAG" --repo samara15321/awg-immortalwrt --json assets --jq ".assets | .[].name" | grep -q "$RELEASE_FILE"; then
+            echo "Release file $RELEASE_FILE already exists. Skipping job."
+            echo "FILE_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "FILE_EXISTS=false" >> $GITHUB_ENV
+          fi
+
+        # Прерываем job'у, если файл уже существует
+      - name: Skip job if release file exists
+        if: env.FILE_EXISTS == 'true'
+        run: |
+          echo "Skipping job as release file already exists."
+          exit 0
+      
       - uses: actions/checkout@v4
         with:
           repository: immortalwrt/immortalwrt
           ref: v${{ matrix.build_env.tag }}
           fetch-depth: 0
           
-      - name: Check if build with current vermagic exists
-        run: |
-          FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/v${{ matrix.build_env.tag }}/amneziawg-tools_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
-          echo "Checking if file exists: $FILE_URL"
-          
-          if curl --silent --head --fail -L "$FILE_URL"; then
-              echo "Build already exists. Skipping build."
-              exit 0  # Останавливает только этот текущий шаг, остальные будут продолжать
-          else
-              echo "No existing build found. Proceeding with build."
-          fi
-        shell: bash
-        continue-on-error: true  # Не останавливает выполнение других параллельных сборок
-        
       - name: Building kernel and tools
-        if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }} fi
+        if: env.FILE_EXISTS == 'false'
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
           # Setup & install feeds
@@ -151,7 +161,7 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          tag_name="$v${{ matrix.build_env.tag }}"
+          tag_name="v${{ matrix.build_env.tag }}"
           mkdir -p awgrelease
           postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
