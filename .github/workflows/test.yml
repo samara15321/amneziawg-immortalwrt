@@ -1,0 +1,211 @@
+name: Auto_Sync_and_Build_OpenWRT_Releases
+
+on:
+  schedule:
+    - cron: '30 23 */4 * *' # Проверка новых релизов каждый 4 день в 23:30
+  workflow_dispatch: # Возможность вручную запустить Action
+  workflow_call:
+    inputs:
+      tag_name:
+        required: true
+        type: string
+
+jobs:
+  sync-releases:
+    runs-on: ubuntu-latest
+    outputs:
+      release_exists: ${{ steps.check_release.outputs.release_exists }}
+      release_tag: ${{ steps.get_release.outputs.release_tag }}
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v4
+
+      - name: Get the latest release from OpenWRT
+        id: get_release
+        run: |
+          RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+
+      - name: Check if release exists in your repo
+        id: check_release
+        run: |
+          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .tag_name)
+          if [ -z "$RELEASE_EXISTS" ] || [ "$RELEASE_EXISTS" == "null" ]; then
+            echo "release_exists=false" >> $GITHUB_ENV
+          else
+            echo "release_exists=true" >> $GITHUB_ENV
+          fi
+
+      - name: Create release in your repo
+        if: env.release_exists == 'false'
+        run: |
+          ART="
+          \`\`\`
+                   A M N E Z I A   W I R E G U A R D
+          -----------------------------------------------------
+                   ImmortalWrt ${{ env.release_tag }}
+          -----------------------------------------------------
+          \`\`\`"
+          curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "tag_name": "${{ env.release_tag }}",
+                "name": "ImmortalWrt ${{ env.release_tag }}",
+                "body": "'"${ART//\"/\\\"}"'"
+              }'
+
+  generate-config:
+    runs-on: ubuntu-latest
+    outputs:
+        job-config: ${{ steps.generate-config.outputs.job-config }}
+        release_tag: ${{ env.VERSION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.16.0'
+          
+      - name: Get OpenWRT version from tag_name
+        id: get_version
+        run: |
+          echo "VERSION=${{ inputs.tag_name }}" | sed 's/^v//' >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Generate Job Config
+        id: generate-config
+        run: node sync_index.js ${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  check-build-timestamp:
+    runs-on: ubuntu-latest
+    needs: generate-config
+    steps:
+      - name: Check if build timestamp exists
+        id: check_timestamp
+        run: |
+          TIMESTAMP_FILE=".last_build_timestamp"
+          if [ -f $TIMESTAMP_FILE ]; then
+            LAST_BUILD_TIMESTAMP=$(cat $TIMESTAMP_FILE)
+            CURRENT_TIME=$(date +%s)
+            TIME_DIFF=$((CURRENT_TIME - LAST_BUILD_TIMESTAMP))
+            if [ $TIME_DIFF -le 86400 ]; then # 86400 секунд = 24 часа
+              echo "Last build was within 24 hours. Skipping rebuild."
+              exit 0
+            fi
+          fi
+          echo "No recent build or 24 hours have passed. Proceeding with rebuild."
+
+      - name: Update build timestamp
+        run: |
+          echo $(date +%s) > .last_build_timestamp
+
+  build:
+     name: "v${{ matrix.build_env.tag }} - ${{ matrix.build_env.pkgarch}} :: ${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}} build"
+     runs-on: ubuntu-latest
+     needs: check-build-timestamp
+     strategy:
+      matrix:
+       build_env: ${{ fromJson(needs.generate-config.outputs.job-config) }}
+
+     steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: immortalwrt/immortalwrt
+          ref: v${{ matrix.build_env.tag }}
+          fetch-depth: 0
+
+      - name: Cache Tools and Kernel
+        id: cache-tools-kernel
+        uses: actions/cache@v4
+        env:
+          cache-name: "cache-tools-kernel-${{ matrix.build_env.tag }}-${{ matrix.build_env.pkgarch}}-${{ matrix.build_env.target}}-${{ matrix.build_env.subtarget}}"
+        with:
+          path: "**"
+          key: ${{ runner.os }}-build-vm4-${{ env.cache-name }}
+
+      - name: Building kernel and tools
+        run: |
+          echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
+
+          # Setup & install feeds
+          wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
+          echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
+          cat ./feeds.conf
+          ./scripts/feeds update && ./scripts/feeds install -a
+
+          # Setup config with AWG and dependencies
+          wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/config.buildinfo -O .config
+          echo "CONFIG_PACKAGE_kmod-amneziawg=m" >> .config
+          echo "CONFIG_PACKAGE_amneziawg-tools=y" >> .config
+          echo "CONFIG_PACKAGE_luci-app-amneziawg=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-crypto-lib-chacha20=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-crypto-lib-chacha20poly1305=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-crypto-chacha20poly1305=m" >> .config
+
+          make defconfig
+
+          echo "    > make tools/install"
+          make tools/install -i -j `nproc`
+
+          cat ./build_dir/target-*/linux-*/linux-*/.vermagic || true
+
+          echo "    > make toolchain/install"
+          make toolchain/install  -i -j `nproc`
+
+          cat ./build_dir/target-*/linux-*/linux-*/.vermagic || true
+
+          # compile kernel module
+          echo "    > make target/linux/compile"
+          make target/linux/compile  -i -j `nproc` V=s
+
+          VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
+          VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
+
+          if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED" ]; then
+            echo Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED
+            exit 1
+          fi
+
+      - name: Build AmneziaWG
+        run: |
+          VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
+          echo "Vermagic: $VERMAGIC"
+
+          VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
+
+          if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED" ]; then
+            echo Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED
+            exit 1
+          fi
+
+          # Ignore kmod build for some targets, replace with the awg-go
+          make package/kmod-amneziawg/{clean,download,prepare} V=s || true
+          make package/kmod-amneziawg/compile V=s || true
+
+          make package/luci-app-amneziawg/{clean,download,prepare}
+          make package/luci-app-amneziawg/compile V=s
+
+          make V=s package/amneziawg-tools/{clean,download,prepare}
+          make V=s package/amneziawg-tools/compile
+
+      - name: Prepare artifacts
+        run: |
+          tag_name=${{ inputs.tag_name }}
+          mkdir -p awgrelease
+          postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
+          cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
+          cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg_*.ipk awgrelease/luci-app-amneziawg_${postfix}.ipk
+          cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg_*.ipk awgrelease/kmod-amneziawg_${postfix}.ipk
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.tag_name }}
+          files: awgrelease/*.ipk
