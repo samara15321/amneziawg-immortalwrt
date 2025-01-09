@@ -44,16 +44,23 @@ jobs:
     steps:
       - name: Get existing combos from release
         run: |
+          # Получаем release ID по тегу
           release_id=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ inputs.tag_name }} | jq -r .id)
+
+          # Извлекаем активы и комбинируем данные
           curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | \
             jq -r '.[].name | split("_") | {pkgarch: .[1], target: .[2], subtarget: .[3]}' | jq -s '.' > existing_combos.json
-          echo "existing_combos=$(jq '.' existing_combos.json)" >> $GITHUB_ENV
+
+          # Записываем результат в переменную окружения
+          existing_combos=$(cat existing_combos.json)
+          echo "existing_combos=$existing_combos" >> $GITHUB_ENV
 
       - name: Filter for missing combos
         id: filter_missing
         run: |
+          # Фильтруем недостающие комбинации из сгенерированного конфигурационного файла
           missing_combos=$(jq -c --argjson existing "${{ env.existing_combos }}" '. | map(select(. as $c | $existing | index($c) | not))' <<< ${{ fromJson(needs.generate-config.outputs.job-config) }})
           echo "::set-output name=missing_combos::$missing_combos"
 
@@ -79,7 +86,6 @@ jobs:
           key: ${{ runner.os }}-build-vm4-${{ matrix.build_env.tag }}-${{ matrix.build_env.pkgarch}}-${{ matrix.build_env.target}}-${{ matrix.build_env.subtarget }}
 
       - name: Building kernel and tools
-        #if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }}
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
