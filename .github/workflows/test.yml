@@ -112,24 +112,24 @@ jobs:
           path: "**"
           key: ${{ runner.os }}-build-vm4-${{ env.cache-name }}
 
-      - name: Building kernel and tools
+      - name: Setup & install feeds
         run: |
-          echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
-
-          # Setup & install feeds
-          wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
-
-          # Проверка и добавление строки в feeds.conf, если она ещё не существует
+          wget https://downloads.immortalwrt.org/releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget }}/feeds.buildinfo -O feeds.conf
+          # Убедимся, что ссылка в файле корректна и не пустая
           if ! grep -q "awg-immortalwrt" ./feeds.conf; then
-          echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
+            echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
           fi
 
-          # Убедимся, что нет лишних пробелов и пустых строк
-          sed -i '/^[[:space:]]*$/d' ./feeds.conf # Удаление пустых строк
-          cat ./feeds.conf # Печать содержимого для проверки
+          # Удаляем пустые строки и символы в конце строк
+          sed -i '/^[[:space:]]*$/d' feeds.conf
+          sed -i 's/[[:space:]]*$//' feeds.conf
 
-           # Обновление и установка зависимостей
-          ./scripts/feeds update && ./scripts/feeds install -a
+          # Проверяем содержимое файла
+          echo "Updated feeds.conf:"
+          cat ./feeds.conf
+
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
 
 
           # Setup config with AWG and dependencies
