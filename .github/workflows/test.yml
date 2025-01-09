@@ -78,6 +78,26 @@ jobs:
           echo "VERSION is: ${{ env.VERSION }}"
           echo "Release Tag (from ENV): ${{ env.release_tag }}"
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.16.0'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Job Config
+        id: generate-config
+        run: |
+          # Передаём переменную VERSION, чтобы она стала доступна в вашем скрипте
+          node sync_index.js ${VERSION}
+        env:
+          VERSION: ${{ env.VERSION }}  # Убедитесь, что вы используете нужное значение
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Debug job-config
+        run: echo "${{ needs.generate-config.outputs.job-config }}"
+
   check-build-timestamp:
     runs-on: ubuntu-latest
     steps:
@@ -120,49 +140,9 @@ jobs:
         with:
           name: build-log
           path: .builds_log.json
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get the latest release from OpenWRT
-        id: get_release
-        run: |
-          RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-          echo "RELEASE_TAG is: $RELEASE_TAG"
-
-      - name: Get OpenWRT version from tag_name
-        id: get_version
-        run: |
-           echo "VERSION=${{ env.release_tag }}" >> $GITHUB_ENV
-           echo "VERSION is set to: ${{ env.release_tag }}"
-
-      - name: Debug tag_name
-        run: |
-          echo "Debugging VERSION..."
-          echo "VERSION is: ${{ env.VERSION }}"
-          echo "Release Tag (from ENV): ${{ env.release_tag }}"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.16.0'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Generate Job Config
-        id: generate-config
-        run: |
-          # Передаём переменную VERSION, чтобы она стала доступна в вашем скрипте
-          node sync_index.js ${VERSION}
-        env:
-          VERSION: ${{ env.VERSION }}  # Убедитесь, что вы используете нужное значение
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          
       - name: Debug job-config
         run: echo "${{ needs.generate-config.outputs.job-config }}"
-  
   build:
     name: "v${{ matrix.build_env.tag }} - ${{ matrix.build_env.pkgarch}} :: ${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}} build"
     runs-on: ubuntu-latest
