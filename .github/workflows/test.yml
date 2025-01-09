@@ -1,7 +1,7 @@
-name: Build Sync_Releases
+name: Re-build_Releases
 on:
   schedule:
-    - cron: '30 23 */7 * *' # Повторный релиз на случай фейла каких-то пакетов в авторелизе.
+    - cron: '40 23 */7 * *' # Повторный релиз на случай фейла каких-то пакетов в авторелизе.
   workflow_dispatch: # Возможность вручную запустить Action
   
 jobs:
