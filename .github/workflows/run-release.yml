@@ -2,8 +2,8 @@ name: Auto_Sync OpenWRT Releases
 
 on:
   schedule:
-    - cron: '30 23 */8 * *' # Проверка новых релизов каждые 8 дней
-  workflow_dispatch: # Возможность вручную запустить Action
+    - cron: '30 23 */8 * *' # Запуск каждые 8 дней
+  workflow_dispatch: # Возможность вручного запуска
 
 jobs:
   sync-releases:
@@ -13,15 +13,24 @@ jobs:
       release_tag: ${{ steps.get_release.outputs.release_tag }}
       missing_assets: ${{ steps.check_assets.outputs.missing_assets }}
     steps:
+      # Проверка вашего репозитория
       - name: Checkout your repo
         uses: actions/checkout@v4
 
+      # Получение последнего релиза ImmortalWrt через GitHub API
       - name: Get the latest release from OpenWRT
         id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "Error: Unable to fetch release tag from ImmortalWrt repository"
+            exit 1
+          fi
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+        env:
+          GITHUB_ENV: ${{ github.env }}
 
+      # Проверка существования релиза в локальном репозитории
       - name: Check if release exists in your repo
         id: check_release
         run: |
@@ -31,10 +40,14 @@ jobs:
           else
             echo "release_exists=true" >> $GITHUB_ENV
           fi
+        env:
+          GITHUB_ENV: ${{ github.env }}
 
+      # Проверка существующих активов в релизе
       - name: Check release assets for completeness
         id: check_assets
         run: |
+          # Проверяем, существует ли релиз
           release_id=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .id)
           if [ "$release_id" == "null" ]; then
@@ -42,33 +55,32 @@ jobs:
             exit 0
           fi
 
+          # Получение списка активов релиза
           asset_names=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | jq -r '.[].name')
 
-          missing=false
+          echo "Assets in release: $asset_names"
 
-          # Debugging: Check the value of job-config output
-          echo "Job Config Output: ${{ needs.generate-config.outputs.job-config }}"
-
-          # Check if the job-config output is empty or null
+          # Проверяем, был ли корректно сгенерирован job-config
           if [ -z "${{ needs.generate-config.outputs.job-config }}" ]; then
-            echo "job-config is empty or null"
+            echo "Error: job-config is empty or null"
             echo "missing_assets=true" >> $GITHUB_ENV
             exit 1
           fi
 
-          # Check if the job-config is valid JSON
-          if ! echo "${{ needs.generate-config.outputs.job-config }}" | jq empty; then
-            echo "job-config is not valid JSON"
+          # Проверка валидности JSON
+          echo "${{ needs.generate-config.outputs.job-config }}" | jq empty || {
+            echo "Error: job-config is not valid JSON"
             echo "missing_assets=true" >> $GITHUB_ENV
             exit 1
-          fi
+          }
 
-          # Now safely proceed with parsing job-config
+          # Теперь можно безопасно прочитать и проверить конфигурацию
+          missing=false
           for combo in $(echo "${{ fromJson(needs.generate-config.outputs.job-config) }}" | jq -r '.[] | "\(.pkgarch)_\(.target)_\(.subtarget)"'); do
             if ! echo "$asset_names" | grep -q "$combo"; then
               missing=true
-              echo "Missing: $combo"
+              echo "Missing asset: $combo"; # Лог отсутствующих активов
             fi
           done
 
@@ -76,7 +88,11 @@ jobs:
             echo "missing_assets=true" >> $GITHUB_ENV
           else
             echo "missing_assets=false" >> $GITHUB_ENV
+          fi
+        env:
+          GITHUB_ENV: ${{ github.env }}
 
+      # Создание нового релиза (если отсутствует)
       - name: Create release in your repo
         if: env.release_exists == 'false'
         run: |
@@ -96,6 +112,7 @@ jobs:
                 "body": "'"${ART//"/\\"}"'"
               }'
 
+  # Job для запуска сборки
   run-build:
     needs: sync-releases
     if: needs.sync-releases.outputs.missing_assets == 'true' || needs.sync-releases.outputs.release_exists == 'false'
