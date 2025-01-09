@@ -27,6 +27,12 @@ jobs:
            echo "VERSION=${{ env.release_tag }}" >> $GITHUB_ENV
            echo "VERSION is set to: ${{ env.release_tag }}"
 
+
+      - name: Get OpenWRT version from tag_name
+        run: |
+           echo "VERSION=${{ env.release_tag }}" >> $GITHUB_ENV
+           echo "VERSION is set to: ${{ env.release_tag }}"
+
       - name: Debug tag_name
         run: |
           echo "Debugging VERSION..."
