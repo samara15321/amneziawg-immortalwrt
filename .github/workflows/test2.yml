@@ -68,12 +68,13 @@ jobs:
         run: |
           FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/v${{ matrix.build_env.tag }}/amneziawg-tools_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
           echo "Checking if file exists: $FILE_URL"
-          
-          if curl --silent --head --fail -L "$FILE_URL"; then
-              echo "Build already exists. Stopping workflow."
-              exit 1
+            
+           if curl --silent --head --fail -L "$FILE_URL"; then
+              echo "Build already exists. Skipping build."
+              echo "EXISTING_BUILD=true" >> $GITHUB_ENV  # Установить флаг о существующем билде
           else
               echo "No existing build found. Proceeding with build."
+              echo "EXISTING_BUILD=false" >> $GITHUB_ENV  # Установить флаг для продолжения
           fi
         shell: bash
 
