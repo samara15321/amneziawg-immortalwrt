@@ -44,8 +44,8 @@ jobs:
       - name: Get OpenWRT version from tag_name
         id: get_version
         run: |
-          VERSION="${{ needs.sync-releases.outputs.release_tag }}"
-          echo "VERSION=${VERSION}" | sed 's/^v//' >> $GITHUB_ENV
+          VERSION="${{ env.VERSION }}"
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
           
       - name: Generate Job Config
         id: generate-config
