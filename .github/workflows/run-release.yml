@@ -2,8 +2,8 @@ name: Auto_Sync OpenWRT Releases
 
 on:
   schedule:
-    - cron: '30 23 */8 * *' # Запуск каждые 8 дней
-  workflow_dispatch: # Возможность вручную запустить Workflow
+    - cron: '30 23 */8 * *' # Проверка новых релизов
+  workflow_dispatch: # Возможность вручную запустить Action
 
 jobs:
   sync-releases:
@@ -11,7 +11,6 @@ jobs:
     outputs:
       release_exists: ${{ steps.check_release.outputs.release_exists }}
       release_tag: ${{ steps.get_release.outputs.release_tag }}
-      missing_assets: ${{ steps.check_assets.outputs.missing_assets }}
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
@@ -20,73 +19,40 @@ jobs:
         id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          echo "::set-output name=release_tag::$RELEASE_TAG"
-          
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+
       - name: Check if release exists in your repo
         id: check_release
         run: |
-          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }} | jq -r .tag_name)
-          [[ "$RELEASE_EXISTS" == 'null' ]] && echo "::set-output name=release_exists::false" || echo "::set-output name=release_exists::true"
-          
-      - name: Check release assets for completeness
-        id: check_assets
-        run: |
-          release_id=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }} | jq -r .id)
-          
-          if [ "$release_id" == "null" ]; then
-            echo "::set-output name=missing_assets::true"
-            exit 0
-          fi
-          
-          asset_names=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | jq -r '.[].name')
-
-          # Генерация всех возможных комбинаций target и subtarget
-          targets=("x86_64" "arm_cortex-a7" "mips_24kc")  # Пример targets
-          subtargets=("generic" "legacy" "mini" "wifi")  # Пример subtargets
-
-          missing=false
-          for target in "${targets[@]}"; do
-            for subtarget in "${subtargets[@]}"; do
-              asset_name="${target}_${subtarget}.tar.gz"
-              if ! echo "$asset_names" | grep -q "$asset_name"; then
-                missing=true
-                echo "Missing asset: $asset_name"
-              fi
-            done
-          done
-          
-          if [[ "$missing" == 'true' ]]; then
-            echo "::set-output name=missing_assets::true"
+          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .tag_name)
+          if [ -z "$RELEASE_EXISTS" ] || [ "$RELEASE_EXISTS" == "null" ]; then
+            echo "release_exists=false" >> $GITHUB_ENV
           else
-            echo "::set-output name=missing_assets::false"
+            echo "release_exists=true" >> $GITHUB_ENV
           fi
-          
-  generate-config:
-    runs-on: ubuntu-latest
-    outputs:
-      job-config: ${{ steps.generate.outputs.job-config }}
-    steps:
-      - name: Generate configuration JSON
-        id: generate
+
+      - name: Create release in your repo
+        if: env.release_exists == 'false'
         run: |
-          targets=("x86_64" "arm_cortex-a7" "mips_24kc")  # Пример targets
-          subtargets=("generic" "legacy" "mini" "wifi")  # Пример subtargets
-          
-          config="[]"
-          for target in "${targets[@]}"; do
-            for subtarget in "${subtargets[@]}"; do
-              config=$(echo $config | jq --arg target "$target" --arg subtarget "$subtarget" \
-                '. += [{"pkgarch": $target, "target": $target, "subtarget": $subtarget}]')
-            done
-          done
-          
-          echo "::set-output name=job-config::$config"
-          
+          ART="
+          \`\`\`
+                   A M N E Z I A   W I R E G U A R D
+          -----------------------------------------------------
+                   ImmortalWrt ${{ env.release_tag }}
+          -----------------------------------------------------
+          \`\`\`"
+          curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "tag_name": "${{ env.release_tag }}",
+                "name": "ImmortalWrt ${{ env.release_tag }}",
+                "body": "'"${ART//\"/\\\"}"'"
+              }'
+
   run-build:
-    needs: [sync-releases, generate-config]
-    if: needs.sync-releases.outputs.missing_assets == 'true' || needs.sync-releases.outputs.release_exists == 'false'
+    needs: sync-releases
+    if: needs.sync-releases.outputs.release_exists == 'false'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
       tag_name: ${{ needs.sync-releases.outputs.release_tag }}
