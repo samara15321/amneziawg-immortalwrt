@@ -42,9 +42,9 @@ jobs:
         run: npm install
 
       - name: Generate Job Config
-        run: |
-          # Передаём переменную VERSION, чтобы она стала доступна в вашем скрипте
-          node sync_index.js ${VERSION}
+        id: generate-config
+        # Передаём переменную VERSION, чтобы она стала доступна в вашем скрипте
+        run: node sync_index.js ${VERSION}
         env:
           VERSION: ${{ env.VERSION }}  # Убедитесь, что вы используете нужное значение
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
