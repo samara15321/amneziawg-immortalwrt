@@ -5,6 +5,7 @@ on:
     - cron: '30 23 */8 * *' # Проверка новых релизов раз в 8 дней
   workflow_dispatch: # Возможность вручную запустить Action
 
+
 jobs:
   sync-releases:
     runs-on: ubuntu-latest
@@ -26,30 +27,33 @@ jobs:
       - name: Check if release exists in your repo
         id: check_release
         run: |
-          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .tag_name)
-          if [ -z "$RELEASE_EXISTS" ] || [ "$RELEASE_EXISTS" == "null" ]; then
-            echo "release_exists=false" >> $GITHUB_ENV
-            echo "release_exists=false" >> $GITHUB_OUTPUT
-          else
-            echo "release_exists=true" >> $GITHUB_ENV
-            echo "release_exists=true" >> $GITHUB_OUTPUT
-          fi
+          postfix="${{ matrix.build_env.tag }}_${{ matrix.build_env.vermagic }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
+          REQUIRED_FILES=("kmod-amneziawg_${postfix}.ipk" "luci-app-amneziawg_${postfix}.ipk" "amneziawg-tools_${postfix}.ipk")
+          TAG=${{ env.release_tag }}
 
-      - name: Check for missing packages in the release
-        id: check_missing_packages
-        run: |
-          MISSING_PACKAGES=""
-          PACKAGES=("amneziawg-tools" "luci-app-amneziawg" "kmod-amneziawg")
-          for PACKAGE in "${PACKAGES[@]}"; do
-            # Check if the .ipk file for the package is in the release
-            PACKAGE_FILE="${PACKAGE}_${{ env.release_tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
-            PACKAGE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r ".assets | .[].name" | grep -E "\b$PACKAGE_FILE\b")
-            if [ -z "$PACKAGE_EXISTS" ]; then
-              MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
+          echo "Checking for release files in release: $TAG"
+
+          MISSING_FILES=""
+          for FILE in "${REQUIRED_FILES[@]}"; do
+            if gh release view "$TAG" --repo samara15321/awg-immortalwrt --json assets --jq ".assets | .[].name" | grep -q "$FILE"; then
+              echo "File $FILE exists."
+            else
+              MISSING_FILES="${MISSING_FILES}${FILE} "
+              echo "File $FILE is missing."
             fi
           done
-          echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
-          echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
+
+          if [ -z "$MISSING_FILES" ]; then
+            echo "All required files are present."
+            echo "release_exists=true" >> $GITHUB_ENV
+            echo "release_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Missing files: $MISSING_FILES"
+            echo "release_exists=false" >> $GITHUB_ENV
+            echo "release_exists=false" >> $GITHUB_OUTPUT
+            echo "missing_files=$MISSING_FILES" >> $GITHUB_ENV
+            echo "missing_files=$MISSING_FILES" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create release in your repo
         if: ${{ env.release_exists == 'false' }}
@@ -71,7 +75,7 @@ jobs:
               }'
 
   build-release:
-    if: ${{ needs.sync-releases.outputs.release_exists == 'false' || needs.sync-releases.outputs.missing_packages != '' }}
+    if: ${{ needs.sync-releases.outputs.release_exists == 'false' || needs.sync-releases.outputs.missing_files != '' }}
     needs: sync-releases
     runs-on: ubuntu-latest
 
@@ -127,8 +131,6 @@ jobs:
       - name: Building kernel and tools
         if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }}
         run: |
-          echo "pkgarch: ${{ matrix.build_env.pkgarch }}, target: ${{ matrix.build_env.target }}, subtarget: ${{ matrix.build_env.subtarget }}"
-
           # Setup & install feeds
           wget https://downloads.immortalwrt.org/releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
           echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
@@ -186,7 +188,6 @@ jobs:
            cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}_$vermagic.ipk
            cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg_*.ipk awgrelease/luci-app-amneziawg_${postfix}_$vermagic.ipk
            cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg_*.ipk awgrelease/kmod-amneziawg_${postfix}_$vermagic.ipk
-
 
       - name: Release
         uses: softprops/action-gh-release@v1
