@@ -74,6 +74,14 @@ jobs:
     if: ${{ needs.sync-releases.outputs.release_exists == 'false' || needs.sync-releases.outputs.missing_packages != '' }}
     needs: sync-releases
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        build_env:
+          - tag: ${{ needs.sync-releases.outputs.release_tag }}
+            vermagic: "your_vermagic_value"  # Здесь указываем значения для vermagic и других переменных.
+            pkgarch: "your_pkgarch_value"
+            target: "your_target_value"
+            subtarget: "your_subtarget_value"
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
@@ -106,10 +114,10 @@ jobs:
       matrix:
         build_env:
           - tag: ${{ needs.sync-releases.outputs.release_tag }}
-            vermagic: ${{ matrix.build_env.vermagic }}
-            pkgarch: ${{ matrix.build_env.pkgarch }}
-            target: ${{ matrix.build_env.target }}
-            subtarget: ${{ matrix.build_env.subtarget }}
+            vermagic: "your_vermagic_value"  # Здесь указываем значения для vermagic и других переменных.
+            pkgarch: "your_pkgarch_value"
+            target: "your_target_value"
+            subtarget: "your_subtarget_value"
     steps:
       - name: Checkout immortalwrt repo
         uses: actions/checkout@v4
