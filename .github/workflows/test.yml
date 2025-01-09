@@ -76,11 +76,13 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        
+
       - name: Generate Job Config
         id: generate-config
-        run: node sync_index.js ${{ env.VERSION }}
+        run: |
+          node sync_index.js ${{ env.VERSION }}
         env:
+          VERSION: ${{ env.VERSION }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   check-build-timestamp:
