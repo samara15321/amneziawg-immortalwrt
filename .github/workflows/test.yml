@@ -38,21 +38,18 @@ jobs:
       - name: Check for missing packages in the release
         id: check_missing_packages
         run: |
-           MISSING_PACKAGES=""
-           PACKAGES=("amneziawg-tools" "luci-app-amneziawg" "kmod-amneziawg")
-
-           for PACKAGE in "${PACKAGES[@]}"; do
-             # Check if the .ipk file for the package is in the release
-             PACKAGE_FILE="${PACKAGE}_v24.10.0-rc3___.ipk"
-             PACKAGE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/v24.10.0-rc3 | jq -r ".assets | .[].name" | grep -q "\b$PACKAGE_FILE\b" && echo "exists" || echo "missing")
-  
-             if [ "$PACKAGE_EXISTS" == "missing" ]; then
-                MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
-             fi
-           done
-
-           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
-           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
+          MISSING_PACKAGES=""
+          PACKAGES=("amneziawg-tools" "luci-app-amneziawg" "kmod-amneziawg")
+          for PACKAGE in "${PACKAGES[@]}"; do
+            # Check if the .ipk file for the package is in the release
+            PACKAGE_FILE="${PACKAGE}_${{ env.release_tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
+            PACKAGE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r ".assets | .[].name" | grep -E "\b$PACKAGE_FILE\b")
+            if [ -z "$PACKAGE_EXISTS" ]; then
+              MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
+            fi
+          done
+          echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
+          echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
 
       - name: Create release in your repo
         if: ${{ env.release_exists == 'false' }}
@@ -77,14 +74,7 @@ jobs:
     if: ${{ needs.sync-releases.outputs.release_exists == 'false' || needs.sync-releases.outputs.missing_packages != '' }}
     needs: sync-releases
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        build_env:
-          - tag: ${{ needs.sync-releases.outputs.release_tag }}
-            vermagic: "your_vermagic_value"  # Здесь указываем значения для vermagic и других переменных.
-            pkgarch: "your_pkgarch_value"
-            target: "your_target_value"
-            subtarget: "your_subtarget_value"
+
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
@@ -115,18 +105,14 @@ jobs:
     needs: build-release
     strategy:
       matrix:
-        build_env:
-          - tag: ${{ needs.sync-releases.outputs.release_tag }}
-            vermagic: "your_vermagic_value"  # Здесь указываем значения для vermagic и других переменных.
-            pkgarch: "your_pkgarch_value"
-            target: "your_target_value"
-            subtarget: "your_subtarget_value"
+        build_env: ${{ fromJson(needs.build-release.outputs.job-config) }}
+
     steps:
       - name: Checkout immortalwrt repo
         uses: actions/checkout@v4
         with:
           repository: immortalwrt/immortalwrt
-          ref: v${{ matrix.build_env.tag }}
+          ref: ${{ needs.sync-releases.outputs.release_tag }}  # Используем переменную из предыдущего шага
           fetch-depth: 0
 
       - name: Cache Tools and Kernel
@@ -201,9 +187,10 @@ jobs:
            cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg_*.ipk awgrelease/luci-app-amneziawg_${postfix}_$vermagic.ipk
            cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg_*.ipk awgrelease/kmod-amneziawg_${postfix}_$vermagic.ipk
 
-      - name: Release
+      - name: Upload artifacts to release
+        if: ${{ needs.sync-releases.outputs.release_exists == 'false' }}
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.sync-releases.outputs.release_tag }}
-          files: awgrelease/*.ipk
-          overwrite: true
+          files: awgrelease/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
