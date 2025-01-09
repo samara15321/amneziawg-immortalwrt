@@ -65,6 +65,7 @@ jobs:
           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
 
+          echo "$RESPONSE"
 
       - name: Create release in your repo
         if: ${{ env.release_exists == 'false' }}
