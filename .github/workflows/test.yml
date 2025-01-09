@@ -71,11 +71,15 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-            
+
       - name: Get OpenWRT version from tag_name
         id: get_version
         run: |
            echo "VERSION=${{ inputs.tag_name }}" | sed 's/^v//' >> $GITHUB_ENV
+
+      - name: Debug tag_name
+        run: |
+            echo "Tag name: ${{ inputs.tag_name }}" # Debugging line
 
       - name: Generate Job Config
         id: generate-config
