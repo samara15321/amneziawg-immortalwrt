@@ -2,7 +2,7 @@ name: Auto_Sync_and_Build_OpenWRT_Releases
 
 on:
   schedule:
-    - cron: '30 23 */4 * *'  # Проверка новых релизов каждый 4 день в 23:30
+    - cron: '30 23 */1 * *'  # Проверка новых релизов каждый день в 23:30
   workflow_dispatch:  # Возможность вручную запустить Action
   
 jobs:
@@ -97,38 +97,46 @@ jobs:
 
   check-build-timestamp:
     runs-on: ubuntu-latest
-    needs: generate-config
     steps:
-      - name: Restore build timestamp from cache
-        uses: actions/cache@v4
-        with:
-          path: .last_build_timestamp
-          key: last-build-timestamp-${{ runner.os }}
+      - name: Checkout repository content
+        uses: actions/checkout@v4
 
-      - name: Check if build timestamp exists
-        id: check_timestamp
+      - name: Load builds log
+        id: load_log
         run: |
-          TIMESTAMP_FILE=".last_build_timestamp"
-          if [ -f $TIMESTAMP_FILE ]; then
-            LAST_BUILD_TIMESTAMP=$(cat $TIMESTAMP_FILE)
-            CURRENT_TIME=$(date +%s)
-            TIME_DIFF=$((CURRENT_TIME - LAST_BUILD_TIMESTAMP))
-            if [ $TIME_DIFF -le 86400 ]; then  # 86400 секунд = 24 часа
-              echo "Last build was within 24 hours. Skipping rebuild."
-              exit 0
-            fi
+          # Имя файла, где мы будем хранить данные о количестве сборок для каждого тега
+          FILE=".builds_log.json"
+          if [ ! -f $FILE ]; then
+            echo "{}" > $FILE
           fi
-          echo "No recent build or 24 hours have passed. Proceeding with rebuild."
+          cat $FILE
 
-      - name: Update build timestamp
+      - name: Check if tag has been built too many times
+        id: check_build_count
         run: |
-          echo $(date +%s) > .last_build_timestamp
+          TAG_NAME=${{ github.ref_name }} # Получение текущего тега из workflow
+          FILE=".builds_log.json" # Файл с учётом предыдущих сборок
+          
+          # Загружаем файл JSON и проверяем количество запусков для текущего тега
+          BUILDS=$(jq -r --arg tag "$TAG_NAME" '.[$tag] // 0' $FILE)
+          echo "Current build count for tag $TAG_NAME: $BUILDS"
 
-      - name: Cache build timestamp
-        uses: actions/cache@v4
+          # Проверяем, если сборки были запущены >= 2, завершаем процесс
+          if [ "$BUILDS" -ge 2 ]; then
+            echo "Tag $TAG_NAME has already been built 2 or more times. Skipping build."
+            exit 0
+          fi
+
+          # Увеличиваем количество запусков для текущего тега и сохраняем обратно в JSON файл
+          BUILDS=$((BUILDS + 1))
+          echo "Updating build count for tag $TAG_NAME to $BUILDS"
+          jq --arg tag "$TAG_NAME" --argjson count $BUILDS '.[$tag] = $count' $FILE > tmp.$$.json && mv tmp.$$.json $FILE
+
+      - name: Save build log
+        uses: actions/upload-artifact@v3
         with:
-          path: .last_build_timestamp
-          key: last-build-timestamp-${{ runner.os }}
+          name: build-log
+          path: .builds_log.json
 
   build:
     name: "v${{ matrix.build_env.tag }} - ${{ matrix.build_env.pkgarch}} :: ${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}} build"
