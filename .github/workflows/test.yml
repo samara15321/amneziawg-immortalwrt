@@ -38,31 +38,30 @@ jobs:
       - name: Check for missing packages in the release
         id: check_missing_packages
         run: |
-           MISSING_PACKAGES=""
-           PACKAGES=("amneziawg-tools" "luci-app-amneziawg" "kmod-amneziawg")
+           - name: Check for missing packages in the release
+             run: |
+                 RESPONSE=$(curl -s "https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }}")
+                 echo "$RESPONSE"
+    
+                 MISSING_PACKAGES=""
+                 PACKAGES=("amneziawg-tools" "luci-app-amneziawg" "kmod-amneziawg")
+    
+                 for PACKAGE in "${PACKAGES[@]}"; do
+                   # Формируем имя пакета по шаблону
+                   PACKAGE_FILE="${PACKAGE}_${{ env.release_tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}_${{ matrix.build_env.vermagic }}.ipk"
+      
+                   # Выполняем запрос к API для получения списка активов релиза
+                   PACKAGE_EXISTS=$(echo "$RESPONSE" | jq -r ".assets | .[].name" | grep -E "\b$PACKAGE_FILE\b")
+      
+                   if [ -z "$PACKAGE_EXISTS" ]; then
+                     MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
+                   fi
+                 done
+    
+                 # Выводим список недостающих пакетов
+                 echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
+                 echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
 
-           # Использование переменной release_tag
-           RESPONSE=$(curl -s "https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }}")
-           echo "API response for tag ${{ env.release_tag }}: $RESPONSE" # Диагностический вывод
-
-           for PACKAGE in "${PACKAGES[@]}"; do
-             PACKAGE_FILE="${PACKAGE}_${{ env.release_tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}_${{ matrix.build_env.vermagic }}.ipk"
-             PACKAGE_EXISTS=$(echo "$RESPONSE" | jq -r ".assets | .[].name" | grep -E "^$PACKAGE_FILE$")
-
-             if [ -z "$PACKAGE_EXISTS" ]; then
-               MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
-             fi
-           done
-
-           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
-           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
-
-           if [ -n "$MISSING_PACKAGES" ]; then
-             echo "Error: Missing packages: $MISSING_PACKAGES"
-             exit 1
-           else
-           echo "All packages are present."
-           fi
 
       - name: Create release in your repo
         if: ${{ env.release_exists == 'false' }}
