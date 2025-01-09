@@ -83,12 +83,11 @@ jobs:
             echo "FILE_EXISTS=false" >> $GITHUB_ENV
           fi
 
-        # Прерываем job'у, если файл уже существует
       - name: Skip job if release file exists
         if: env.FILE_EXISTS == 'true'
         run: |
           echo "Skipping job as release file already exists."
-          exit 0
+        continue-on-error: true
       
       - uses: actions/checkout@v4
         with:
