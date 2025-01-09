@@ -1,4 +1,5 @@
 name: Auto_Build Sync_Releases
+
 on:
   workflow_call:
     inputs:
@@ -10,8 +11,8 @@ jobs:
   generate-config:
     runs-on: ubuntu-latest
     outputs:
-        job-config: ${{ steps.generate-config.outputs.job-config }}
-        release_tag: ${{ env.VERSION }}
+      job-config: ${{ steps.generate-config.outputs.job-config }}
+      release_tag: ${{ env.VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,7 +21,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.16.0'
-          
+
       - name: Get OpenWRT version from tag_name
         id: get_version
         run: |
@@ -28,22 +29,42 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        
+
       - name: Generate Job Config
         id: generate-config
         run: node sync_index.js ${{ env.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build:
-     name: "v${{ matrix.build_env.tag }} - ${{ matrix.build_env.pkgarch}} :: ${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}} build"
-     runs-on: ubuntu-latest
-     needs: generate-config
-     strategy:
-      matrix:
-       build_env: ${{ fromJson(needs.generate-config.outputs.job-config) }}
+  filter-build:
+    runs-on: ubuntu-latest
+    needs: generate-config
+    outputs:
+      missing_combos: ${{ steps.filter_missing.outputs.missing_combos }}
+    steps:
+      - name: Get existing combos from release
+        run: |
+          release_id=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ inputs.tag_name }} | jq -r .id)
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | \
+            jq -r '.[].name | split("_") | {pkgarch: .[1], target: .[2], subtarget: .[3]}' | jq -s '.' > existing_combos.json
+          echo "existing_combos=$(jq '.' existing_combos.json)" >> $GITHUB_ENV
 
-     steps:
+      - name: Filter for missing combos
+        id: filter_missing
+        run: |
+          missing_combos=$(jq -c --argjson existing "${{ env.existing_combos }}" '. | map(select(. as $c | $existing | index($c) | not))' <<< ${{ fromJson(needs.generate-config.outputs.job-config) }})
+          echo "::set-output name=missing_combos::$missing_combos"
+
+  build-missing:
+    runs-on: ubuntu-latest
+    needs: filter-build
+    if: needs.filter-build.outputs.missing_combos != '[]'
+    strategy:
+      matrix:
+        build_env: ${{ fromJson(needs.filter-build.outputs.missing_combos) }}
+    steps:
       - uses: actions/checkout@v4
         with:
           repository: immortalwrt/immortalwrt
@@ -53,11 +74,9 @@ jobs:
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
         uses: actions/cache@v4
-        env:
-          cache-name: "cache-tools-kernel-${{ matrix.build_env.tag }}-${{ matrix.build_env.pkgarch}}-${{ matrix.build_env.target}}-${{ matrix.build_env.subtarget}}"
         with:
           path: "**"
-          key: ${{ runner.os }}-build-vm4-${{ env.cache-name }}
+          key: ${{ runner.os }}-build-vm4-${{ matrix.build_env.tag }}-${{ matrix.build_env.pkgarch}}-${{ matrix.build_env.target}}-${{ matrix.build_env.subtarget }}
 
       - name: Building kernel and tools
         #if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }}
@@ -128,8 +147,8 @@ jobs:
       - name: Prepare artifacts
         run: |
           tag_name=${{ inputs.tag_name }}
-          mkdir -p awgrelease
           postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
+          mkdir -p awgrelease
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg_*.ipk awgrelease/luci-app-amneziawg_${postfix}.ipk
           cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg_*.ipk awgrelease/kmod-amneziawg_${postfix}.ipk
