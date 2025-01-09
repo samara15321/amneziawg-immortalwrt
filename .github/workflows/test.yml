@@ -113,17 +113,21 @@ jobs:
           key: ${{ runner.os }}-build-vm4-${{ env.cache-name }}
 
       - name: Building kernel and tools
-        #if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }}
         run: |
-          echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
+        echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
-          # Setup & install feeds
-          wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
-              if ! grep -q "awg-immortalwrt" ./feeds.conf; then
-               echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
-              fi
-          cat ./feeds.conf
-          ./scripts/feeds update && ./scripts/feeds install -a
+        # Setup & install feeds
+        wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
+
+        # Проверка и добавление строки в feeds.conf, если она ещё не существует
+        if ! grep -q "awg-immortalwrt" ./feeds.conf; then
+          echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
+        fi
+
+         # Проверим правильность файла перед продолжением
+         cat ./feeds.conf
+         # Обновление и установка зависимостей
+         ./scripts/feeds update && ./scripts/feeds install -a
 
           # Setup config with AWG and dependencies
           wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/config.buildinfo -O .config
