@@ -42,21 +42,29 @@ jobs:
           PACKAGES=("amneziawg-tools" "luci-app-amneziawg" "kmod-amneziawg")
 
           for PACKAGE in "${PACKAGES[@]}"; do
-            # Формируем имя пакета в зависимости от переменных
-            PACKAGE_FILE="${PACKAGE}_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}_$vermagic.ipk"
+          # Формируем имя пакета в зависимости от переменных
+          PACKAGE_FILE="${PACKAGE}_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}_$vermagic.ipk"
+  
+          # Получаем список активов для указанного тега
+          RESPONSE=$(curl -s "https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }}")
 
-            # Выполняем запрос к API для получения списка активов релиза
-            PACKAGE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ matrix.build_env.tag }} | jq -r ".assets | .[].name" | grep -E "\b$PACKAGE_FILE\b")
-
-             # Проверяем, если файл пакета не найден
-           if [ -z "$PACKAGE_EXISTS" ]; then
-             MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
-           fi
+          # Проверяем, что ответ не пустой и содержит активы
+          if echo "$RESPONSE" | jq -e '.assets' > /dev/null; then
+            # Выполняем проверку наличия пакета в списке активов
+            PACKAGE_EXISTS=$(echo "$RESPONSE" | jq -r ".assets | .[].name" | grep -E "\b$PACKAGE_FILE\b")
+          if [ -z "$PACKAGE_EXISTS" ]; then
+            MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
+          fi
+          else
+          echo "No assets found for release ${{ env.release_tag }}."
+          MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
+          fi
           done
 
           # Выводим список недостающих пакетов
           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
+
 
       - name: Create release in your repo
         if: ${{ env.release_exists == 'false' }}
