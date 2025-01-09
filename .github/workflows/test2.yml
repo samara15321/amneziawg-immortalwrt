@@ -67,7 +67,7 @@ jobs:
       - name: Check if build with current vermagic exists
         run: |
           VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
-          FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/v${{ matrix.build_env.tag }}/amneziawg-tools_${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
+          FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/v${{ matrix.build_env.tag }}/amneziawg-tools_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
           
           echo "Checking if file exists: $FILE_URL"
           if curl --head --silent --fail $FILE_URL; then
