@@ -66,6 +66,8 @@ jobs:
      steps:      
       - name: Check if release file exists
         id: check_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
           RELEASE_FILE="kmod-amneziawg_${postfix}.ipk"
