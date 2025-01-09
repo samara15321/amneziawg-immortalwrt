@@ -21,7 +21,6 @@ jobs:
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-          echo "::set-output name=release_tag::$RELEASE_TAG"
 
       - name: Check if release exists in your repo
         id: check_release
@@ -29,10 +28,8 @@ jobs:
           RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .tag_name)
           if [ -z "$RELEASE_EXISTS" ] || [ "$RELEASE_EXISTS" == "null" ]; then
             echo "release_exists=false" >> $GITHUB_ENV
-            echo "::set-output name=release_exists::false"
           else
             echo "release_exists=true" >> $GITHUB_ENV
-            echo "::set-output name=release_exists::true"
           fi
 
       - name: Check release assets for completeness
@@ -42,7 +39,6 @@ jobs:
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .id)
           if [ "$release_id" == "null" ]; then
             echo "missing_assets=true" >> $GITHUB_ENV
-            echo "::set-output name=missing_assets::true"
             exit 0
           fi
 
@@ -50,7 +46,8 @@ jobs:
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | jq -r '.[].name')
 
           missing=false
-          for combo in ${{ fromJson(needs.generate-config.outputs.job-config) | toJSON | jq -r '.[] | "\(.pkgarch)_\(.target)_\(.subtarget)"' }}; do
+          # Using a run block to handle the loop
+          for combo in $(echo "${{ fromJson(needs.generate-config.outputs.job-config) }}" | jq -r '.[] | "\(.pkgarch)_\(.target)_\(.subtarget)"'); do
             if ! echo "$asset_names" | grep -q "$combo"; then
               missing=true
               echo "Missing: $combo"
@@ -59,11 +56,8 @@ jobs:
 
           if [ "$missing" = true ]; then
             echo "missing_assets=true" >> $GITHUB_ENV
-            echo "::set-output name=missing_assets::true"
           else
             echo "missing_assets=false" >> $GITHUB_ENV
-            echo "::set-output name=missing_assets::false"
-          fi
 
       - name: Create release in your repo
         if: env.release_exists == 'false'
