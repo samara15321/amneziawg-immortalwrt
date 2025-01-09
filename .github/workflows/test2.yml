@@ -67,16 +67,15 @@ jobs:
       - name: Check if build with current vermagic exists
         run: |
           FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/v${{ matrix.build_env.tag }}/amneziawg-tools_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
-          
           echo "Checking if file exists: $FILE_URL"
           
-          # Check if file exists
-          if curl --silent --head --fail -L $FILE_URL; then
-              echo "Build already exists. Skipping build."
-              exit 0
+          if curl --silent --head --fail -L "$FILE_URL"; then
+              echo "Build already exists. Stopping workflow."
+              exit 1
           else
               echo "No existing build found. Proceeding with build."
           fi
+        shell: bash
 
       - name: Building kernel and tools
         if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }} fi
