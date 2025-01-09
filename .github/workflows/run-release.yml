@@ -46,18 +46,25 @@ jobs:
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | jq -r '.[].name')
 
           missing=false
-          
+
           # Debugging: Check the value of job-config output
           echo "Job Config Output: ${{ needs.generate-config.outputs.job-config }}"
 
-          # If job-config is empty or invalid, handle it gracefully
-          if [ -z "${{ needs.generate-config.outputs.job-config }}" ] || [[ ! "${{ needs.generate-config.outputs.job-config }}" =~ ^\{.*\}$ ]]; then
-            echo "job-config is empty or malformed"
+          # Check if the job-config output is empty or null
+          if [ -z "${{ needs.generate-config.outputs.job-config }}" ]; then
+            echo "job-config is empty or null"
             echo "missing_assets=true" >> $GITHUB_ENV
             exit 1
           fi
 
-          # Proceed with parsing job-config if valid
+          # Check if the job-config is valid JSON
+          if ! echo "${{ needs.generate-config.outputs.job-config }}" | jq empty; then
+            echo "job-config is not valid JSON"
+            echo "missing_assets=true" >> $GITHUB_ENV
+            exit 1
+          fi
+
+          # Now safely proceed with parsing job-config
           for combo in $(echo "${{ fromJson(needs.generate-config.outputs.job-config) }}" | jq -r '.[] | "\(.pkgarch)_\(.target)_\(.subtarget)"'); do
             if ! echo "$asset_names" | grep -q "$combo"; then
               missing=true
