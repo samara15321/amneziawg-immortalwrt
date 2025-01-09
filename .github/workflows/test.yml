@@ -58,8 +58,8 @@ jobs:
   generate-config:
     runs-on: ubuntu-latest
     outputs:
-        job-config: ${{ steps.generate-config.outputs.job-config }}
-        release_tag: ${{ env.VERSION }}
+     job-config: ${{ steps.generate-config.outputs.job-config }}
+     release_tag: ${{ steps.get_version.outputs.VERSION }}  # Исправить сюда!
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
