@@ -68,7 +68,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.16.0'
-          
+
+      - name: Install dependencies
+        run: npm install
+            
       - name: Get OpenWRT version from tag_name
         id: get_version
         run: |
@@ -77,10 +80,11 @@ jobs:
       - name: Generate Job Config
         id: generate-config
         run: |
-          node sync_index.js ${{ github.event.inputs.tag_name }}
+          node sync_index.js ${{ inputs.tag_name }}  # Pass the correct input to the script
         env:
-         VERSION: ${{ github.event.inputs.tag_name }}  # Убедитесь, что здесь передается версия
+         VERSION: ${{ inputs.tag_name }}  # Ensure the version is passed as an environment variable
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
   check-build-timestamp:
     runs-on: ubuntu-latest
