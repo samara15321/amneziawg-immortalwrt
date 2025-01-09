@@ -66,26 +66,16 @@ jobs:
           
       - name: Check if build with current vermagic exists
         run: |
-          VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
           FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/v${{ matrix.build_env.tag }}/amneziawg-tools_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
           
           echo "Checking if file exists: $FILE_URL"
           
           # Check if file exists
-          if curl --silent --fail -L $FILE_URL --output /tmp/existing_file.ipk; then
-              echo "File found. Checking vermagic inside the file..."
-              # Extract vermagic and compare it to expected
-              VERMAGIC_FOUND=$(ar p /tmp/existing_file.ipk data.tar.gz | tar -xzO | grep -oP '(?<=vermagic=)[a-f0-9]{32}')
-              if [[ "$VERMAGIC_FOUND" == "$VERMAGIC_EXPECTED" ]]; then
-                  echo "Build with matching vermagic ($VERMAGIC_FOUND) already exists. Skipping build."
-                  exit 0
-              else
-                  echo "VERMAGIC mismatch: found $VERMAGIC_FOUND, expected $VERMAGIC_EXPECTED. Stopping build."
-                  exit 1
-              fi
+          if curl --silent --head --fail -L $FILE_URL; then
+              echo "Build already exists. Skipping build."
+              exit 0
           else
-              echo "File not found at $FILE_URL. Stopping build."
-              exit 1
+              echo "No existing build found. Proceeding with build."
           fi
 
       - name: Building kernel and tools
