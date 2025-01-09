@@ -40,14 +40,21 @@ jobs:
         run: |
           MISSING_PACKAGES=""
           PACKAGES=("amneziawg-tools" "luci-app-amneziawg" "kmod-amneziawg")
+
           for PACKAGE in "${PACKAGES[@]}"; do
-            # Check if the .ipk file for the package is in the release
-            PACKAGE_FILE="${PACKAGE}_${{ env.release_tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
-            PACKAGE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r ".assets | .[].name" | grep -E "\b$PACKAGE_FILE\b")
-            if [ -z "$PACKAGE_EXISTS" ]; then
-              MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
-            fi
+            # Формируем имя пакета в зависимости от переменных
+            PACKAGE_FILE="${PACKAGE}_v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}_$vermagic.ipk"
+
+            # Выполняем запрос к API для получения списка активов релиза
+            PACKAGE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ matrix.build_env.tag }} | jq -r ".assets | .[].name" | grep -E "\b$PACKAGE_FILE\b")
+
+             # Проверяем, если файл пакета не найден
+           if [ -z "$PACKAGE_EXISTS" ]; then
+             MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
+           fi
           done
+
+          # Выводим список недостающих пакетов
           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
 
