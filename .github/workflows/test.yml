@@ -38,18 +38,21 @@ jobs:
       - name: Check for missing packages in the release
         id: check_missing_packages
         run: |
-          MISSING_PACKAGES=""
-          PACKAGES=("amneziawg-tools" "luci-app-amneziawg" "kmod-amneziawg")
-          for PACKAGE in "${PACKAGES[@]}"; do
-            # Check if the .ipk file for the package is in the release
-            PACKAGE_FILE="${PACKAGE}_${{ env.release_tag }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}.ipk"
-            PACKAGE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r ".assets | .[].name" | grep -E "\b$PACKAGE_FILE\b")
-            if [ -z "$PACKAGE_EXISTS" ]; then
-              MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
-            fi
-          done
-          echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
-          echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
+           MISSING_PACKAGES=""
+           PACKAGES=("amneziawg-tools" "luci-app-amneziawg" "kmod-amneziawg")
+
+           for PACKAGE in "${PACKAGES[@]}"; do
+             # Check if the .ipk file for the package is in the release
+             PACKAGE_FILE="${PACKAGE}_v24.10.0-rc3___.ipk"
+             PACKAGE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/v24.10.0-rc3 | jq -r ".assets | .[].name" | grep -q "\b$PACKAGE_FILE\b" && echo "exists" || echo "missing")
+  
+             if [ "$PACKAGE_EXISTS" == "missing" ]; then
+                MISSING_PACKAGES="${MISSING_PACKAGES}${PACKAGE}_ipk "
+             fi
+           done
+
+           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_ENV
+           echo "missing_packages=$MISSING_PACKAGES" >> $GITHUB_OUTPUT
 
       - name: Create release in your repo
         if: ${{ env.release_exists == 'false' }}
