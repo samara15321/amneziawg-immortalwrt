@@ -159,6 +159,10 @@ jobs:
         env:
           VERSION: ${{ env.VERSION }}  # Убедитесь, что вы используете нужное значение
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Debug job-config
+        run: echo "${{ needs.generate-config.outputs.job-config }}"
+  
   build:
     name: "v${{ matrix.build_env.tag }} - ${{ matrix.build_env.pkgarch}} :: ${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}} build"
     runs-on: ubuntu-latest
