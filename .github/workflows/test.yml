@@ -75,11 +75,7 @@ jobs:
       - name: Get OpenWRT version from tag_name
         id: get_version
         run: |
-          if [ "${{ github.event_name }}" == "workflow_call" ]; then
-           echo "VERSION=${{ inputs.tag_name }}" | sed 's/^v//' >> $GITHUB_ENV
-          else
            echo "VERSION=${{ inputs.tag_name }}" >> $GITHUB_ENV
-          fi
 
       - name: Generate Job Config
         id: generate-config
