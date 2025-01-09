@@ -3,7 +3,7 @@ name: Auto_Sync OpenWRT Releases
 on:
   schedule:
     - cron: '30 23 */8 * *' # Запуск каждые 8 дней
-  workflow_dispatch: # Возможность вручного запуска
+  workflow_dispatch: # Возможность вручную запустить Workflow
 
 jobs:
   sync-releases:
@@ -13,108 +13,55 @@ jobs:
       release_tag: ${{ steps.get_release.outputs.release_tag }}
       missing_assets: ${{ steps.check_assets.outputs.missing_assets }}
     steps:
-      # Проверка вашего репозитория
       - name: Checkout your repo
         uses: actions/checkout@v4
 
-      # Получение последнего релиза ImmortalWrt через GitHub API
       - name: Get the latest release from OpenWRT
         id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          if [ -z "$RELEASE_TAG" ]; then
-            echo "Error: Unable to fetch release tag from ImmortalWrt repository"
-            exit 1
-          fi
-          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-        env:
-          GITHUB_ENV: ${{ github.env }}
+          echo "::set-output name=release_tag::$RELEASE_TAG"
 
-      # Проверка существования релиза в локальном репозитории
       - name: Check if release exists in your repo
         id: check_release
         run: |
-          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .tag_name)
-          if [ -z "$RELEASE_EXISTS" ] || [ "$RELEASE_EXISTS" == "null" ]; then
-            echo "release_exists=false" >> $GITHUB_ENV
-          else
-            echo "release_exists=true" >> $GITHUB_ENV
-          fi
-        env:
-          GITHUB_ENV: ${{ github.env }}
+          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }} | jq -r .tag_name)
+          [[ "$RELEASE_EXISTS" == 'null' ]] && echo "::set-output name=release_exists::false" || echo "::set-output name=release_exists::true"
 
-      # Проверка существующих активов в релизе
       - name: Check release assets for completeness
         id: check_assets
         run: |
-          # Проверяем, существует ли релиз
           release_id=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .id)
+            https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }} | jq -r .id)
           if [ "$release_id" == "null" ]; then
-            echo "missing_assets=true" >> $GITHUB_ENV
+            echo "::set-output name=missing_assets::true"
             exit 0
           fi
 
-          # Получение списка активов релиза
           asset_names=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | jq -r '.[].name')
-
-          echo "Assets in release: $asset_names"
-
-          # Проверяем, был ли корректно сгенерирован job-config
-          if [ -z "${{ needs.generate-config.outputs.job-config }}" ]; then
-            echo "Error: job-config is empty or null"
-            echo "missing_assets=true" >> $GITHUB_ENV
-            exit 1
-          fi
-
-          # Проверка валидности JSON
-          echo "${{ needs.generate-config.outputs.job-config }}" | jq empty || {
-            echo "Error: job-config is not valid JSON"
-            echo "missing_assets=true" >> $GITHUB_ENV
-            exit 1
-          }
-
-          # Теперь можно безопасно прочитать и проверить конфигурацию
           missing=false
-          for combo in $(echo "${{ fromJson(needs.generate-config.outputs.job-config) }}" | jq -r '.[] | "\(.pkgarch)_\(.target)_\(.subtarget)"'); do
+          for combo in $(echo "${{ needs.generate-config.outputs.job-config }}" | jq -r '.[].asset_name'); do
             if ! echo "$asset_names" | grep -q "$combo"; then
               missing=true
-              echo "Missing asset: $combo"; # Лог отсутствующих активов
+              echo "Missing asset: $combo"
             fi
           done
+          [[ "$missing" == 'true' ]] && echo "::set-output name=missing_assets::true" || echo "::set-output name=missing_assets::false"
 
-          if [ "$missing" = true ]; then
-            echo "missing_assets=true" >> $GITHUB_ENV
-          else
-            echo "missing_assets=false" >> $GITHUB_ENV
-          fi
-        env:
-          GITHUB_ENV: ${{ github.env }}
-
-      # Создание нового релиза (если отсутствует)
-      - name: Create release in your repo
-        if: env.release_exists == 'false'
+  generate-config:
+    runs-on: ubuntu-latest
+    outputs:
+      job-config: ${{ steps.generate.outputs.job-config }}
+    steps:
+      - name: Generate configuration JSON
+        id: generate
         run: |
-          ART="
-          \`\`\`
-               A M N E Z I A   W I R E G U A R D
-          -----------------------------------------------------
-               ImmortalWrt ${{ env.release_tag }}
-          -----------------------------------------------------
-          \`\`\`"
-          curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "tag_name": "${{ env.release_tag }}",
-                "name": "ImmortalWrt ${{ env.release_tag }}",
-                "body": "'"${ART//"/\\"}"'"
-              }'
+          CONFIG='[{"pkgarch": "x86_64", "target": "generic", "subtarget": "legacy"}]'
+          echo "::set-output name=job-config::$CONFIG"
 
-  # Job для запуска сборки
   run-build:
-    needs: sync-releases
+    needs: [sync-releases, generate-config]
     if: needs.sync-releases.outputs.missing_assets == 'true' || needs.sync-releases.outputs.release_exists == 'false'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
