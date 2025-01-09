@@ -53,9 +53,9 @@ jobs:
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | \
             jq -r '.[].name | split("_") | {pkgarch: .[1], target: .[2], subtarget: .[3]}' | jq -s '.' > existing_combos.json
 
-          # Записываем результат в переменную окружения
-          existing_combos=$(cat existing_combos.json)
-          echo "existing_combos=$existing_combos" >> $GITHUB_ENV
+            # Записываем результат в переменную окружения
+            existing_combos=$(cat existing_combos.json | jq -c .)  # Преобразуем в строку JSON
+            echo "existing_combos=$existing_combos" >> $GITHUB_ENV
 
       - name: Filter for missing combos
         id: filter_missing
