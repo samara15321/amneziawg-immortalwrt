@@ -1,7 +1,7 @@
 name: Build Sync_Releases
 on:
   schedule:
-    - cron: '30 23 */8 * *' # Проверка новых релизов
+    - cron: '30 23 */7 * *' # Повторный релиз на случай фейла каких-то пакетов в авторелизе.
   workflow_dispatch: # Возможность вручную запустить Action
   
 jobs:
@@ -113,7 +113,7 @@ jobs:
           key: ${{ runner.os }}-build-vm4-${{ env.cache-name }}
 
       - name: Building kernel and tools
-        #if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }} fi
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
           # Setup & install feeds
