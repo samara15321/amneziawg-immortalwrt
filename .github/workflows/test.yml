@@ -76,14 +76,14 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
+        
       - name: Generate Job Config
         id: generate-config
         run: |
-          node sync_index.js ${{ env.VERSION }}
+          node sync_index.js ${{ github.event.inputs.tag_name }}
         env:
-          VERSION: ${{ env.VERSION }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         VERSION: ${{ github.event.inputs.tag_name }}  # Убедитесь, что здесь передается версия
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   check-build-timestamp:
     runs-on: ubuntu-latest
