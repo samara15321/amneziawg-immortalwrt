@@ -119,7 +119,9 @@ jobs:
 
           # Setup & install feeds
           wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
-          echo -e "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
+              if ! grep -q "awg-immortalwrt" ./feeds.conf; then
+               echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
+              fi
           cat ./feeds.conf
           ./scripts/feeds update && ./scripts/feeds install -a
 
