@@ -80,8 +80,9 @@ jobs:
       - name: Generate Job Config
         id: generate-config
         run: |
-          node sync_index.js ${{ env.release_tag }}  # Pass the correct input to the script
+          node sync_index.js ${{ inputs.tag_name }}  # Pass the correct input to the script
         env:
+          VERSION: ${{ inputs.tag_name }}  # Ensure the version is passed as an environment variable
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
