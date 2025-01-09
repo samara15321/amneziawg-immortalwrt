@@ -6,7 +6,23 @@ on:
   workflow_dispatch: # Возможность вручную запустить Action
 
 jobs:
+  generate-config:
+    runs-on: ubuntu-latest
+    outputs:
+      job-config: ${{ steps.generate.outputs.job-config }}
+    steps:
+      - name: Generate release configuration
+        id: generate
+        run: |
+          CONFIG='[
+            {"pkgarch": "x86_64", "target": "generic", "subtarget": "legacy"},
+            {"pkgarch": "arm_cortex-a9", "target": "bcm53xx", "subtarget": "generic"}
+          ]'
+          echo "$CONFIG" > $GITHUB_OUTPUT
+          echo "job-config=$CONFIG" >> $GITHUB_OUTPUT
+
   sync-releases:
+    needs: generate-config
     runs-on: ubuntu-latest
     outputs:
       release_exists: ${{ steps.check_release.outputs.release_exists }}
@@ -20,16 +36,16 @@ jobs:
         id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          echo "::set-output name=release_tag::$RELEASE_TAG"
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
 
       - name: Check if release exists in your repo
         id: check_release
         run: |
           RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }} | jq -r .tag_name)
           if [[ -z "$RELEASE_EXISTS" || "$RELEASE_EXISTS" == "null" ]]; then
-            echo "::set-output name=release_exists::false"
+            echo "release_exists=false" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=release_exists::true"
+            echo "release_exists=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Check release assets for completeness
@@ -37,35 +53,22 @@ jobs:
         run: |
           release_id=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }} | jq -r .id)
+
           if [[ "$release_id" == "null" ]]; then
-            echo "::set-output name=missing_assets::true"
+            echo "missing_assets=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           asset_names=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/samara15321/awg-immortalwrt/releases/$release_id/assets | jq -r '.[].name')
 
-          echo "Found assets: $asset_names"
+          echo "DEBUG (assets in release): $asset_names"
 
-          # Работа с job-config
-          missing=false
           job_config="${{ needs.generate-config.outputs.job-config }}"
 
-          # Если config отсутствует или некорректен
-          if [[ -z "$job_config" || "$job_config" == "null" ]]; then
-            echo "Missing or invalid job-config"
-            echo "::set-output name=missing_assets::true"
-            exit 1
-          fi
+          echo "Job-config received: $job_config"
 
-          # Проверка корректности JSON
-          if ! echo "$job_config" | jq empty; then
-            echo "Invalid JSON in job-config"
-            echo "::set-output name=missing_assets::true"
-            exit 1
-          fi
-
-          # Проверяем необходимые активы
+          missing=false
           for combo in $(echo "$job_config" | jq -r '.[] | "\(.pkgarch)_\(.target)_\(.subtarget)"'); do
             if ! echo "$asset_names" | grep -q "$combo"; then
               missing=true
@@ -74,9 +77,9 @@ jobs:
           done
 
           if [[ "$missing" == "true" ]]; then
-            echo "::set-output name=missing_assets::true"
+            echo "missing_assets=true" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=missing_assets::false"
+            echo "missing_assets=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Create release in your repo
@@ -97,20 +100,6 @@ jobs:
                 \"name\": \"ImmortalWrt ${{ steps.get_release.outputs.release_tag }}\",
                 \"body\": \"${ART//\"/\\\"}\"
               }"
-
-  generate-config:
-    runs-on: ubuntu-latest
-    outputs:
-      job-config: ${{ steps.generate.outputs.job-config }}
-    steps:
-      - name: Generate release configuration
-        id: generate
-        run: |
-          CONFIG='[
-            {"pkgarch": "x86_64", "target": "generic", "subtarget": "legacy"},
-            {"pkgarch": "arm_cortex-a9", "target": "bcm53xx", "subtarget": "generic"}
-          ]'
-          echo "::set-output name=job-config::$CONFIG"
 
   run-build:
     needs: [sync-releases, generate-config]
