@@ -60,9 +60,10 @@ jobs:
       - name: Filter for missing combos
         id: filter_missing
         run: |
-          # Фильтруем недостающие комбинации из сгенерированного конфигурационного файла
-          missing_combos=$(jq -c --argjson existing "${{ env.existing_combos }}" '. | map(select(. as $c | $existing | index($c) | not))' <<< ${{ fromJson(needs.generate-config.outputs.job-config) }})
-          echo "::set-output name=missing_combos::$missing_combos"
+           # Фильтруем недостающие комбинации из сгенерированного конфигурационного файла
+           missing_combos=$(jq -c --argjson existing "$(cat existing_combos.json)" '. | map(select(. as $c | $existing | index($c) | not))' <<< ${{ fromJson(needs.generate-config.outputs.job-config) }})
+           echo "::set-output name=missing_combos::$missing_combos"
+
 
   build-missing:
     runs-on: ubuntu-latest
