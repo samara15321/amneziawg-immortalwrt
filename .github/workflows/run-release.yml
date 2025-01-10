@@ -30,13 +30,22 @@ jobs:
           else
             echo "release_exists=true" >> $GITHUB_ENV
           fi
+          
+      - name: Check if release exists in file (skip if exists)
+        id: check_saved_state
+        run: |
+          if [ -f saved_release_tag.txt ]; then
+            echo "Found saved state, skipping further checks."
+            exit 0
+          fi
 
       - name: Save release tag for retry
-        if: env.release_exists == 'false'
-        run: echo "${{ env.release_tag }}" > saved_release_tag.txt
+        if: env.release_exists == 'false' && steps.check_saved_state.outcome != 'success'
+        run: |
+          echo "release_exists=false" > saved_release_tag.txt
 
       - name: force retry if release does not exist
-        if: env.release_exists == 'false'
+        if: env.release_exists == 'false' && steps.check_saved_state.outcome != 'success'
         run: |
           echo "Forcing retry..."
           exit 1
