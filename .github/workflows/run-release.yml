@@ -74,3 +74,21 @@ jobs:
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
       tag_name: ${{ needs.sync-releases.outputs.release_tag }}
+
+
+  restore-state:
+    needs: sync-releases
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download saved_release_tag artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: saved_release_tag
+
+      - name: Check if state is saved and continue
+        run: |
+          if [ -f saved_release_tag.txt ]; then
+            echo "Found saved release tag, continuing process..."
+          else
+            echo "No saved release state found."
+          fi      
