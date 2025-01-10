@@ -20,7 +20,6 @@ jobs:
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-
       - name: Check if release exists in your repo
         id: check_release
         run: |
@@ -29,11 +28,12 @@ jobs:
             echo "release_exists=false" >> $GITHUB_ENV
           else
             echo "release_exists=true" >> $GITHUB_ENV
+          fi
 
       - name: Wait for 5 hours if release exists
-        if: env.release_exists == 'false'
+        if: env.release_exists == 'true'
         run: sleep $((5 * 60 * 60))
-
+          
       - name: Create release in your repo
         if: env.release_exists == 'false'
         run: |
@@ -52,7 +52,6 @@ jobs:
                 "name": "ImmortalWrt ${{ env.release_tag }}",
                 "body": "'"${ART//\"/\\\"}"'"
               }'
-
   run-build:
     needs: sync-releases
     if: needs.sync-releases.outputs.release_exists == 'false'
