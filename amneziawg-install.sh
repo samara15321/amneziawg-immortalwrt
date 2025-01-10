@@ -17,7 +17,7 @@ install_awg_packages() {
     VERSION=$(ubus call system board | jsonfilter -e '@.release.version')
     PKGPOSTFIX="_v${VERSION}_${PKGARCH}_${TARGET}_${SUBTARGET}.ipk"
     
-    BASE_URL="https://github.com/samara1531/awg-openwrt/releases/download/" "https://github.com/samara15321/awg-immortalwrt/releases/download/"
+    BASE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/"
     
     AWG_DIR="/tmp/amneziawg"
     mkdir -p "$AWG_DIR"
