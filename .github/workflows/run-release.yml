@@ -20,6 +20,7 @@ jobs:
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+          
       - name: Check if release exists in your repo
         id: check_release
         run: |
@@ -30,9 +31,15 @@ jobs:
             echo "release_exists=true" >> $GITHUB_ENV
           fi
 
-      - name: Wait for 5 hours if release exists
+      - name: Save release tag for retry
         if: env.release_exists == 'false'
-        run: sleep $((5 * 60 * 60))
+        run: echo "${{ env.release_tag }}" > saved_release_tag.txt
+
+      - name: Fail to force retry if release does not exist
+        if: env.release_exists == 'false'
+        run: |
+          echo "Release not found. Forcing retry..."
+          exit 1
           
       - name: Create release in your repo
         if: env.release_exists == 'false'
