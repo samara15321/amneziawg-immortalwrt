@@ -1,4 +1,4 @@
-name: Auto-Build AmneziaWG for snapshot immortalwrt
+name: Auto-Build AWG for snapshot immortalwrt
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
