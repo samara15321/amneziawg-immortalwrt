@@ -97,3 +97,5 @@ jobs:
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
       tag_name: ${{ needs.sync-releases.outputs.release_tag }}
+      run: |
+       echo "Calling second workflow with tag_name = ${{ needs.sync-releases.outputs.release_tag }}"
