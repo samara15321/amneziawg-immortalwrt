@@ -1,4 +1,5 @@
-name: Auto_Build Sync_Releases
+name: Auto_Build Release
+
 on:
   workflow_call:
     inputs:
@@ -59,19 +60,28 @@ jobs:
           path: "**"
           key: ${{ runner.os }}-build-vm4-${{ env.cache-name }}
 
+      - name: Install Python3 elftools module
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyelftools
+          
+      - name: Install Python3 elftools module
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyelftools
+
       - name: Building kernel and tools
         #if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }}
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
           # Setup & install feeds
-          wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
-          echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
-          cat ./feeds.conf
+          wget https://downloads.immortalwrt.org/releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
+          echo "src-git awgopenwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
           ./scripts/feeds update && ./scripts/feeds install -a
 
           # Setup config with AWG and dependencies
-          wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/config.buildinfo -O .config
+          wget https://downloads.immortalwrt.org/releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/config.buildinfo -O .config
           echo "CONFIG_PACKAGE_kmod-amneziawg=m" >> .config
           echo "CONFIG_PACKAGE_amneziawg-tools=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-amneziawg=y" >> .config
