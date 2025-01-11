@@ -97,4 +97,4 @@ jobs:
     if: needs.check-saved-tag.outputs.can_proceed == 'true'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
-      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
+      tag_name: ${{ LATEST_TAG }}
