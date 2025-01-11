@@ -38,7 +38,7 @@ jobs:
           \`\`\`
                    A M N E Z I A   W I R E G U A R D
           -----------------------------------------------------
-                   ImmortalWRT ${{ env.release_tag }}
+                   ImmortalWrt ${{ env.release_tag }}
           -----------------------------------------------------
           \`\`\`"
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
@@ -46,6 +46,13 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
                 "tag_name": "${{ env.release_tag }}",
-                "name": "ImmortalWRT ${{ env.release_tag }}",
+                "name": "ImmortalWrt ${{ env.release_tag }}",
                 "body": "'"${ART//\"/\\\"}"'"
               }'
+              
+  run-build:
+    needs: sync-releases
+    if: needs.sync-releases.outputs.release_exists == 'false'
+    uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
+    with:
+      tag_name: ${{ needs.sync-releases.outputs.release_tag }}              
