@@ -34,10 +34,14 @@ jobs:
       - name: Save RELEASE_TAG to file if it does not exist
         if: steps.check_release.outputs.release_exists == 'false'
         run: |
+          # Ensure we are working on the master branch
+          git checkout master
+          # Save the release tag to the file
           echo "${{ steps.get_release.outputs.release_tag }}" > saved_release_tag.txt
+          # Add the file, commit and push the changes
           git add saved_release_tag.txt
-          git commit -m "Update saved_release_tag.txt"
-          git push
+          git commit -m "Update saved_release_tag.txt with new release tag"
+          git push origin master
 
       - name: Create release in your repo
         if: steps.check_release.outputs.release_exists == 'false'
