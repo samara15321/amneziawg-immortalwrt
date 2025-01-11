@@ -94,7 +94,6 @@ jobs:
   run-build:
     needs: check-saved-tag
     if: needs.check-saved-tag.outputs.can_proceed == 'true'
-        echo "::set-output name=release_tag::${{ needs.sync-releases.outputs.release_tag }}"
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
       tag_name: ${{ needs.sync-releases.outputs.release_tag }}
