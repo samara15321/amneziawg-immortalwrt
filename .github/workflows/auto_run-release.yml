@@ -38,7 +38,7 @@ jobs:
             echo "Comparing the saved release tag with the latest release tag."
             if [ -f saved_release_tag.txt ]; then
             SAVED_TAG=$(cat saved_release_tag.txt) # Read the saved tag
-            LATEST_TAG="v24.10.0-rc3" # Use the latest tag
+            LATEST_TAG="${{ needs.sync-releases.outputs.release_tag }}"
             echo "Saved Tag: $SAVED_TAG"
             echo "Latest Tag: $LATEST_TAG"
             if [ "$SAVED_TAG" == "$LATEST_TAG" ]; then
