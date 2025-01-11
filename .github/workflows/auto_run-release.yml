@@ -11,6 +11,7 @@ jobs:
     outputs:
       release_exists: ${{ steps.check_release.outputs.release_exists }}
       release_tag: ${{ steps.get_release.outputs.release_tag }}
+      can_proceed: ${{ steps.check_tag.outputs.can_proceed }}
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
@@ -29,8 +30,27 @@ jobs:
             echo "release_exists=true" >> $GITHUB_OUTPUT
           else
             echo "release_exists=false" >> $GITHUB_OUTPUT
-          fi
-
+            
+      - name: Check saved release tag
+        id: check_tag
+        run: |
+          echo "Comparing the saved release tag with the latest release tag."
+          if [ -f saved_release_tag.txt ]; then
+            SAVED_TAG=$(cat saved_release_tag.txt) # Читаем сохраненный тэг
+            LATEST_TAG="${{ steps.get_release.outputs.release_tag }}" # Берем последний тэг
+            echo "Saved Tag: $SAVED_TAG"
+            echo "Latest Tag: $LATEST_TAG"
+            if [ "$SAVED_TAG" == "$LATEST_TAG" ]; then
+              echo "Tags match. Proceeding."
+              echo "can_proceed=true" >> $GITHUB_OUTPUT
+            else
+              echo "Tags do not match. Not proceeding."
+              echo "can_proceed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "The saved_release_tag.txt file does not exist. Cannot proceed."
+            echo "can_proceed=false" >> $GITHUB_OUTPUT
+            
       - name: Save RELEASE_TAG to file every time
         run: |
           # Ensure we are working on the master branch
@@ -59,42 +79,17 @@ jobs:
           }
           EOF
 
-      - name: Checkout your repo
-        uses: actions/checkout@v4
-
-      - name: Check saved release tag
-        id: check_tag
-        run: |
-          echo "Comparing the saved release tag with the latest release tag."
-          if [ -f saved_release_tag.txt ]; then
-            SAVED_TAG=$(cat saved_release_tag.txt) # Читаем сохраненный тэг
-            LATEST_TAG="${{ needs.sync-releases.outputs.release_tag }}" # Берем последний тэг из предыдущей задачи
-            echo "Saved Tag: $SAVED_TAG"
-            echo "Latest Tag: $LATEST_TAG"
-            if [ "$SAVED_TAG" == "$LATEST_TAG" ]; then
-              echo "Tags match. Proceed is true."
-              echo "can_proceed=true" >> $GITHUB_OUTPUT
-            else
-              echo "Tags do not match. Proceed is false."
-              echo "can_proceed=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "The saved_release_tag.txt file does not exist. Cannot proceed."
-            echo "can_proceed=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Print the release_tag being passed
         run: |
-          echo "Release Tag being passed: ${{ needs.sync-releases.outputs.release_tag }}"
+          echo "Release Tag being passed: ${{ steps.get_release.outputs.release_tag }}"
 
       - name: Set release_tag output
-        id: set_release_tag
         run: |
-          echo "release_tag=${{ needs.sync-releases.outputs.release_tag }}" >> $GITHUB_OUTPUT
-          echo "Calling second workflow with tag_name=${{ needs.sync-releases.outputs.release_tag }}"
-
+          echo "Calling second workflow with tag_name=${{ steps.get_release.outputs.release_tag }}"
+        
   run-build:
-    if: needs.check-saved-tag.outputs.can_proceed == 'true'
+    needs: sync-releases
+    if: needs.sync-releases.outputs.can_proceed == 'true'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
-      tag_name: ${{ needs.check-saved-tag.outputs.release_tag }}
+      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
