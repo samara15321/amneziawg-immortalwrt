@@ -2,7 +2,7 @@ name: Auto_Sync OpenWRT Releases
 
 on:
   schedule:
-    - cron: '30 23 */8 * *'
+    - cron: '30 23 */1 * *'
   workflow_dispatch:
 
 jobs:
@@ -11,7 +11,7 @@ jobs:
     outputs:
       release_exists: ${{ steps.check_release.outputs.release_exists }}
       release_tag: ${{ steps.get_release.outputs.release_tag }}
-      can_proceed: ${{ steps.check_tag.outputs.can_proceed }}
+      can_proceed: ${{ steps.check_metadata.outputs.can_proceed }}
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
@@ -20,7 +20,9 @@ jobs:
         id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
+          RELEASE_DATE=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/releases/tags/$RELEASE_TAG | jq -r '.published_at')
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+          echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
 
       - name: Check if release exists in your repo
         id: check_release
@@ -31,44 +33,54 @@ jobs:
           else
             echo "release_exists=false" >> $GITHUB_OUTPUT
           fi
-            
-      - name: Save RELEASE_TAG to file every time
+
+      - name: Save RELEASE_TAG and DATE to file every time
         run: |
-          # Ensure we are working on the master branch
           git checkout master
-          # Configure Git user name and email
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          # Save the release tag to the file, even if it's the same tag
-          echo "${{ steps.get_release.outputs.release_tag }}" > saved_release_tag.txt
-          # Add the file, commit, and push the changes
-          git add saved_release_tag.txt
-          git commit --allow-empty -m "Update saved_release_tag.txt with new release tag"
+          echo "${{ steps.get_release.outputs.release_tag }},${{ steps.get_release.outputs.release_date }}" > saved_release_metadata.txt
+          git add saved_release_metadata.txt
+          git commit --allow-empty -m "Update release metadata with tag and timestamp"
           git push origin master
 
-      - name: Check saved release tag
-        id: check_tag
+      - name: Check saved release tag and timestamp
+        id: check_metadata
         run: |
-            echo "Comparing the saved release tag with the latest release tag."
-            if [ -f saved_release_tag.txt ]; then
-            SAVED_TAG=$(cat saved_release_tag.txt) # Read the saved tag
-            LATEST_TAG="${{ needs.sync-releases.outputs.release_tag }}"
+          echo "Comparing the saved release tag and its timestamp."
+          if [ -f saved_release_metadata.txt ]; then
+            IFS=',' read SAVED_TAG SAVED_DATE < saved_release_metadata.txt
+            LATEST_TAG="${{ steps.get_release.outputs.release_tag }}"
+            LATEST_DATE="${{ steps.get_release.outputs.release_date }}"
             echo "Saved Tag: $SAVED_TAG"
             echo "Latest Tag: $LATEST_TAG"
+            echo "Saved Date: $SAVED_DATE"
+            echo "Latest Date: $LATEST_DATE"
+
             if [ "$SAVED_TAG" == "$LATEST_TAG" ]; then
-            echo "Tags match. Proceeding."
-            echo "can_proceed=true" >> $GITHUB_OUTPUT
+              SAVED_EPOCH=$(date -d "$SAVED_DATE" +%s)
+              LATEST_EPOCH=$(date -d "$LATEST_DATE" +%s)
+              CURRENT_TIME=$(date +%s)
+              AGE=$(( (CURRENT_TIME - SAVED_EPOCH) / 3600 ))
+
+              if (( AGE <= 36 )); then
+                echo "Tag matches and is not older than 36 hours. Proceeding."
+                echo "can_proceed=true" >> $GITHUB_OUTPUT
+              else
+                echo "Tag matches but is older than 36 hours. Stopping."
+                echo "can_proceed=false" >> $GITHUB_OUTPUT
+              fi
             else
-              echo "Tags do not match. Not proceeding." 
+              echo "Tags do not match. Not proceeding."
               echo "can_proceed=false" >> $GITHUB_OUTPUT
             fi
-            else
-             echo "The saved_release_tag.txt file does not exist. Cannot proceed."
-             echo "can_proceed=false" >> $GITHUB_OUTPUT
-            fi
-            
+          else
+            echo "The saved_release_metadata.txt file does not exist. Cannot proceed."
+            echo "can_proceed=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create release in your repo
-        if: steps.check_release.outputs.release_exists == 'false'
+        if: steps.check_release.outputs.release_exists == 'false' && steps.check_metadata.outputs.can_proceed == 'true'
         run: |
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -81,14 +93,6 @@ jobs:
           }
           EOF
 
-      - name: Print the release_tag being passed
-        run: |
-          echo "Release Tag being passed: ${{ steps.get_release.outputs.release_tag }}"
-
-      - name: Set release_tag output
-        run: |
-          echo "Calling second workflow with tag_name=${{ steps.get_release.outputs.release_tag }}"
-        
   run-build:
     needs: sync-releases
     if: needs.sync-releases.outputs.can_proceed == 'true'
