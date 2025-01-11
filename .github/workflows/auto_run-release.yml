@@ -2,7 +2,7 @@ name: Auto_Sync OpenWRT Releases
 
 on:
   schedule:
-    - cron: '30 23 */1 * *' # Проверка новых релизов
+    - cron: '30 23 */8 * *' # Проверка новых релизов
   workflow_dispatch: # Возможность вручную запустить Action
 
 jobs:
@@ -12,77 +12,37 @@ jobs:
       release_exists: ${{ steps.check_release.outputs.release_exists }}
       release_tag: ${{ steps.get_release.outputs.release_tag }}
     steps:
-      - name: Установка необходимых инструментов
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-      - name: Checkout вашего репозитория
+      - name: Checkout your repo
         uses: actions/checkout@v4
 
-      - name: Получение последнего релиза из OpenWRT
+      - name: Get the latest release from OpenWRT
         id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
-          echo "::set-output name=release_tag::${RELEASE_TAG}"
-      - name: Проверка существующего релиза в вашем репозитории
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+      - name: Check if release exists in your repo
         id: check_release
         run: |
-          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${RELEASE_TAG} | jq -r .tag_name)
+          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r .tag_name)
           if [ -z "$RELEASE_EXISTS" ] || [ "$RELEASE_EXISTS" == "null" ]; then
             echo "release_exists=false" >> $GITHUB_ENV
-            echo "::set-output name=release_exists::false"
           else
             echo "release_exists=true" >> $GITHUB_ENV
-            echo "::set-output name=release_exists::true"
           fi
-      - name: Проверка сохраненного состояния
-        id: check_saved_state
-        run: |
-          if [ -f saved_release_tag.txt ]; then
-            SAVED_RELEASE=$(cat saved_release_tag.txt)
-            if [ "$SAVED_RELEASE" == "$RELEASE_TAG" ]; then
-              echo "Найдено сохраненное состояние: $SAVED_RELEASE (пропускаем шаги)."
-              exit 0
-            fi
-          fi
-      - name: Сохранение тега для повторного запуска
-        if: steps.check_release.outputs.release_exists == 'false'
-        run: |
-          echo "${RELEASE_TAG}" > saved_release_tag.txt
-          echo "Сохранен тег для следующего запуска: ${RELEASE_TAG}"
+       
       - name: Создание релиза в вашем репозитории
-        if: steps.check_release.outputs.release_exists == 'false' && steps.check_saved_state.outcome != 'success'       
+        if: env.release_exists == 'false'
         run: |
-          ART="
-          \`\`\`
-                            AMNEZIA WIREGUARD
-          -----------------------------------------------------
-                            ImmortalWRT ${RELEASE_TAG}
-          -----------------------------------------------------
-          \`\`\`"
+          echo "Начинаю создание релиза для тега ${RELEASE_TAG}"
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
             --data '{"tag_name": "'"${RELEASE_TAG}"'",
-                      "name": "ImmortalWrt '"${RELEASE_TAG}"'",
-                      "body": "'"${ART//\"/\\\"}"'"
-                    }'
+                      "name": "ImmortalWrt '"${RELEASE_TAG}"'"}'
+              
   run-build:
     needs: sync-releases
     if: needs.sync-releases.outputs.release_exists == 'false'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
-      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
-
-  restore-state:
-    needs: sync-releases
-    runs-on: ubuntu-latest
-    steps:
-      - name: Загрузка сохраненного состояния
-        run: |
-          if [ -f saved_release_tag.txt ]; then
-            echo "Found saved release state from previous run."
-          else
-            echo "No saved state found."
-          fi
+      tag_name: ${{ needs.sync-releases.outputs.release_tag }}              
