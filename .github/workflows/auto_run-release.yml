@@ -2,8 +2,8 @@ name: Auto_Sync OpenWRT Releases
 
 on:
   schedule:
-    - cron: '30 23 */8 * *' # Проверка новых релизов каждые 8 дней
-  workflow_dispatch: # Возможность вручную запустить Action
+    - cron: '30 23 */8 * *'
+  workflow_dispatch:
 
 jobs:
   sync-releases:
@@ -15,61 +15,36 @@ jobs:
       - name: Checkout your repo
         uses: actions/checkout@v4
 
-      # Получение последнего релиза из репозитория OpenWRT
       - name: Get the latest release from OpenWRT
         id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-        env:
-          TAG_CHECK_URL: "https://api.github.com/repos/immortalwrt/immortalwrt/tags"
+          echo "::set-output name=release_tag::$RELEASE_TAG"
 
-      # Проверка, существует ли релиз в вашем репозитории
       - name: Check if release exists in your repo
         id: check_release
         run: |
-          RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ env.release_tag }} | jq -r '.tag_name')
-          if [ -z "$RELEASE_EXISTS" ] || [ "$RELEASE_EXISTS" == "null" ]; then
-            echo "release_exists=false" >> $GITHUB_ENV
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }})
+          if [ "$RESPONSE" -eq 200 ]; then
+            echo "::set-output name=release_exists::true"
           else
-            echo "release_exists=true" >> $GITHUB_ENV
+            echo "::set-output name=release_exists::false"
           fi
-        env:
-          release_tag: ${{ env.release_tag }}
 
       - name: Create release in your repo
-        if: env.release_exists == 'false'
+        if: steps.check_release.outputs.release_exists == 'false'
         run: |
-          # Формирование текста описания релиза
-          ART="A M N E Z I A   W I R E G U A R D
-          --------------------------------------
-               ImmortalWrt ${{ env.release_tag }}
-          --------------------------------------"
-
-          # Экранирование текста описания релиза для JSON
-          BODY=$(printf '%s' "$ART" | jq -R '.')
-
-          # Вывод JSON для отладки
-          echo "Generated JSON:"
-          echo "{
-            \"tag_name\": \"${{ env.release_tag }}\",
-            \"name\": \"ImmortalWrt ${{ env.release_tag }}\",
-            \"body\": $BODY
-          }"
-
-          # Отправка запроса к GitHub API для создания релиза
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"tag_name\": \"${{ env.release_tag }}\",
-              \"name\": \"ImmortalWrt ${{ env.release_tag }}\",
-              \"body\": $BODY
-            }"
-        env:
-          release_tag: ${{ env.release_tag }}
+            -d @- <<EOF
+          {
+            "tag_name": "${{ steps.get_release.outputs.release_tag }}",
+            "name": "ImmortalWrt ${{ steps.get_release.outputs.release_tag }}",
+            "body": "A M N E Z I A W I R E G U A R D\n--------------------------------------\nImmortalWrt ${{ steps.get_release.outputs.release_tag }}\n--------------------------------------"
+          }
+          EOF
 
-  # Дополнительное задание: Построение (Build)
   run-build:
     needs: sync-releases
     if: needs.sync-releases.outputs.release_exists == 'false'
