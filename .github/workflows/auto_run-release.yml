@@ -24,7 +24,7 @@ jobs:
       - name: Check if release exists in your repo
         id: check_release
         run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }})
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }}
           if [ "$RESPONSE" -eq 200 ]; then
             echo "release_exists=true" >> $GITHUB_OUTPUT
           else
