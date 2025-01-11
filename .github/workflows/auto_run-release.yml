@@ -25,6 +25,7 @@ jobs:
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
+          echo "::set-output name=release_tag::${RELEASE_TAG}"
 
       - name: Проверка существующего релиза в вашем репозитории
         id: check_release
@@ -32,33 +33,37 @@ jobs:
           RELEASE_EXISTS=$(curl -s https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${RELEASE_TAG} | jq -r .tag_name)
           if [ -z "$RELEASE_EXISTS" ] || [ "$RELEASE_EXISTS" == "null" ]; then
             echo "release_exists=false" >> $GITHUB_ENV
+            echo "::set-output name=release_exists::false"
           else
             echo "release_exists=true" >> $GITHUB_ENV
+            echo "::set-output name=release_exists::true"
           fi
 
-      - name: Проверка сохраненного состояния (если уже запускался)
+      - name: Проверка сохраненного состояния
         id: check_saved_state
         run: |
           if [ -f saved_release_tag.txt ]; then
             SAVED_RELEASE=$(cat saved_release_tag.txt)
-            echo "Найдено сохраненное состояние: $SAVED_RELEASE (пропускаем шаги)."
-            exit 0 # Завершаем выполнение, если состояние уже сохранено
+            if [ "$SAVED_RELEASE" == "$RELEASE_TAG" ]; then
+              echo "Найдено сохраненное состояние: $SAVED_RELEASE (пропускаем шаги)."
+              exit 0
+            fi
           fi
 
       - name: Сохранение тега для повторного запуска
-        if: env.release_exists == 'false'
+        if: steps.check_release.outputs.release_exists == 'false'
         run: |
           echo "${RELEASE_TAG}" > saved_release_tag.txt
           echo "Сохранен тег для следующего запуска: ${RELEASE_TAG}"
 
-      - name: Принудительное завершение (и выполнение при следующем запуске)
-        if: env.release_exists == 'false'
+      - name: Принудительное завершение (если релиз отсутствует)
+        if: steps.check_release.outputs.release_exists == 'false'
         run: |
-          echo "Релиз еще отсутствует в вашем репозитории. Прерываем выполнение и повторим при следующем запуске."
-          exit 1
+          echo "Релиз еще отсутствует в вашем репозитории. Завершаем выполнение."
+          exit 0
 
       - name: Создание релиза в вашем репозитории
-        if: env.release_exists == 'false'
+        if: steps.check_release.outputs.release_exists == 'false'
         run: |
           ART="
           \`\`\`
