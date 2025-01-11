@@ -87,6 +87,10 @@ jobs:
       - name: Print the release_tag being passed
         run: |
          echo "Release Tag being passed: ${{ needs.sync-releases.outputs.release_tag }}"
+         
+      - name: Set release_tag output
+        run: |
+         echo "::set-output name=release_tag::${{ needs.sync-releases.outputs.release_tag }}"
         
   run-build:
     needs: check-saved-tag
