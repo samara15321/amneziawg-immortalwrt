@@ -32,6 +32,20 @@ jobs:
             echo "release_exists=false" >> $GITHUB_OUTPUT
           fi
             
+      - name: Save RELEASE_TAG to file every time
+        run: |
+          # Ensure we are working on the master branch
+          git checkout master
+          # Configure Git user name and email
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          # Save the release tag to the file, even if it's the same tag
+          echo "${{ steps.get_release.outputs.release_tag }}" > saved_release_tag.txt
+          # Add the file, commit, and push the changes
+          git add saved_release_tag.txt
+          git commit --allow-empty -m "Update saved_release_tag.txt with new release tag"
+          git push origin master
+
       - name: Check saved release tag
         id: check_tag
         run: |
@@ -53,20 +67,6 @@ jobs:
              echo "can_proceed=false" >> $GITHUB_OUTPUT
             fi
             
-      - name: Save RELEASE_TAG to file every time
-        run: |
-          # Ensure we are working on the master branch
-          git checkout master
-          # Configure Git user name and email
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          # Save the release tag to the file, even if it's the same tag
-          echo "${{ steps.get_release.outputs.release_tag }}" > saved_release_tag.txt
-          # Add the file, commit, and push the changes
-          git add saved_release_tag.txt
-          git commit --allow-empty -m "Update saved_release_tag.txt with new release tag"
-          git push origin master
-
       - name: Create release in your repo
         if: steps.check_release.outputs.release_exists == 'false'
         run: |
