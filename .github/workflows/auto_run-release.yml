@@ -2,7 +2,7 @@ name: Auto_Sync OpenWRT Releases
 
 on:
   schedule:
-    - cron: '30 23 */1 * *'
+    - cron: '30 23 */8 * *'
   workflow_dispatch:
 
 jobs:
@@ -22,62 +22,65 @@ jobs:
           echo "saved_release=$SAVED_RELEASE" >> $GITHUB_OUTPUT
 
       - name: Fetch latest release from ImmortalWRT
+        id: fetch_latest_release
         run: |
           RELEASE_TAG=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
 
-          echo "LATEST_RELEASE=$RELEASE_TAG" >> $GITHUB_ENV
+          echo "latest_release=$RELEASE_TAG" >> $GITHUB_OUTPUT
 
       - name: Compare release tags
+        id: compare_tags
         run: |
-          if [[ "${{ steps.read_saved_tag.outputs.saved_release }}" == "$LATEST_RELEASE" ]]; then
-            echo "Releases match. Exiting."
-            echo "SKIP=true" >> $GITHUB_ENV
-            exit 0
+          if [[ "${{ steps.read_saved_tag.outputs.saved_release }}" == "${{ steps.fetch_latest_release.outputs.latest_release }}" ]]; then
+            echo "SKIP=true" >> $GITHUB_OUTPUT
+          else
+            echo "SKIP=false" >> $GITHUB_OUTPUT
           fi
-          echo "Releases differ. Proceeding."
-          echo "SKIP=false" >> $GITHUB_ENV
+        outputs:
+          SKIP: ${{ steps.compare_tags.outputs.SKIP }}
 
       - name: Check if release exists in your repo
+        id: check_release_exists
         run: |
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/$LATEST_RELEASE")
+            "https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.fetch_latest_release.outputs.latest_release }}")
 
           if [ "$RESPONSE" -eq 200 ]; then
-            echo "Release exists. Exiting."
-            echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
+            echo "release_exists=true" >> $GITHUB_OUTPUT
           else
-            echo "Release does not exist. Proceeding."
-            echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
+            echo "release_exists=false" >> $GITHUB_OUTPUT
           fi
+        outputs:
+          release_exists: ${{ steps.check_release_exists.outputs.release_exists }}
 
       - name: Create release in your repo
-        if: env.RELEASE_EXISTS == 'false' && env.SKIP == 'false'
+        if: ${{ steps.check_release_exists.outputs.release_exists == 'false' && steps.compare_tags.outputs.SKIP == 'false' }}
         run: |
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d @- https://api.github.com/repos/samara15321/awg-immortalwrt/releases <<EOF
           {
-            "tag_name": "$LATEST_RELEASE",
+            "tag_name": "${{ steps.fetch_latest_release.outputs.latest_release }}",
             "name": "ImmortalWrt $LATEST_RELEASE",
-            "body": "**Changelog:**\n$COMMITS"
+            "body": "ImmortalWrt: $LATEST_RELEASE"
           }
           EOF
 
       - name: Save latest release tag
-        if: env.SKIP == 'false'
+        if: ${{ steps.compare_tags.outputs.SKIP == 'false' }}
         run: |
-          echo "$LATEST_RELEASE" > saved_release_tag.txt
+          echo "${{ steps.fetch_latest_release.outputs.latest_release }}" > saved_release_tag.txt
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add saved_release_tag.txt
-          git commit -m "Update saved_release_tag to $LATEST_RELEASE"
+          git commit -m "Update saved_release_tag to ${{ steps.fetch_latest_release.outputs.latest_release }}"
           git push
 
   run-build:
     needs: sync-releases
-    if: needs.sync-releases.outputs.release_exists == 'false' && env.SKIP == 'false'
+    if: needs.sync-releases.outputs.release_exists == 'false' && needs.sync-releases.outputs.SKIP == 'false'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
-      tag_name: ${{ env.LATEST_RELEASE }}
+      tag_name: ${{ needs.sync-releases.outputs.latest_release }}
