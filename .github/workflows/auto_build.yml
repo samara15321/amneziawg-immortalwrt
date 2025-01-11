@@ -10,9 +10,13 @@ jobs:
   generate-config:
     runs-on: ubuntu-latest
     outputs:
-        job-config: ${{ steps.generate-config.outputs.job-config }}
-        release_tag: ${{ env.VERSION }}
+      job-config: ${{ steps.generate-config.outputs.job-config }}
+      release_tag: ${{ env.VERSION }}
     steps:
+      - name: Set the VERSION environment variable
+        run: |
+          echo "VERSION=${{ inputs.tag_name }}" >> $GITHUB_ENV
+          
       - name: Checkout code
         uses: actions/checkout@v4
 
