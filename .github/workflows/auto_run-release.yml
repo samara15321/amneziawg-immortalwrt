@@ -21,13 +21,18 @@ jobs:
           fi
           echo "saved_release=$SAVED_RELEASE" >> $GITHUB_OUTPUT
 
-      - name: Fetch latest release from ImmortalWRT
+      - name: Fetch latest release tag from ImmortalWRT
         id: fetch_latest_release
         run: |
-          RELEASE_TAG=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
+          RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
 
-          echo "latest_release=$RELEASE_TAG" >> $GITHUB_OUTPUT
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "Error: No tags found in ImmortalWRT repository!"
+            exit 1
+          fi
+
+          echo "Latest release tag is: $RELEASE_TAG"
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
 
       - name: Compare release tags
         id: compare_tags
