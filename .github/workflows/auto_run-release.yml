@@ -83,7 +83,11 @@ jobs:
           else
             echo "::set-output name=can_proceed::false"
           fi
-
+          
+      - name: Print the release_tag being passed
+        run: |
+         echo "Release Tag being passed: ${{ needs.sync-releases.outputs.release_tag }}"
+        
   run-build:
     needs: check-saved-tag
     if: needs.check-saved-tag.outputs.can_proceed == 'true'
