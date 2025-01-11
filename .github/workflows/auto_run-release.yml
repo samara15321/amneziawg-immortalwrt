@@ -30,6 +30,7 @@ jobs:
             echo "release_exists=true" >> $GITHUB_OUTPUT
           else
             echo "release_exists=false" >> $GITHUB_OUTPUT
+          fi
             
       - name: Check saved release tag
         id: check_tag
