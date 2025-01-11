@@ -35,21 +35,11 @@ jobs:
         if: env.release_exists == 'false'
         run: |
           echo "Начинаю создание релиза для тега ${RELEASE_TAG}"
-          ART=$(cat <<-END
-          \`\`\`
-                            AMNEZIA WIREGUARD
-          -----------------------------------------------------
-                            ImmortalWRT ${RELEASE_TAG}
-          -----------------------------------------------------
-          \`\`\`
-          END
-          )
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
             --data '{"tag_name": "'"${RELEASE_TAG}"'",
-                      "name": "ImmortalWrt '"${RELEASE_TAG}"'",
-                      "body": "'"$(echo "$ART" | sed 's/"/\\"/g' | tr '\n' '\\n')"'" }'
+                      "name": "ImmortalWrt '"${RELEASE_TAG}"'"}'
               
   run-build:
     needs: sync-releases
