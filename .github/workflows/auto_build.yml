@@ -10,13 +10,9 @@ jobs:
   generate-config:
     runs-on: ubuntu-latest
     outputs:
-      job-config: ${{ steps.generate-config.outputs.job-config }}
-      release_tag: ${{ env.VERSION }}
+        job-config: ${{ steps.generate-config.outputs.job-config }}
+        release_tag: ${{ env.VERSION }}
     steps:
-      - name: Set the VERSION environment variable
-        run: |
-          echo "VERSION=${{ inputs.tag_name }}" >> $GITHUB_ENV
-          
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -29,9 +25,9 @@ jobs:
         id: get_version
         run: |
           echo "VERSION=${{ inputs.tag_name }}" | sed 's/^v//' >> $GITHUB_ENV
-          
-      - name: Print version to check
-        run: echo "VERSION is ${{ env.VERSION }}"
+
+      - name: Install dependencies
+        run: npm install
         
       - name: Generate Job Config
         id: generate-config
@@ -63,23 +59,19 @@ jobs:
           path: "**"
           key: ${{ runner.os }}-build-vm4-${{ env.cache-name }}
 
-      - name: Install Python3 elftools module
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pyelftools
-
       - name: Building kernel and tools
         #if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }}
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
           # Setup & install feeds
-          wget https://downloads.immortalwrt.org//snapshots/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
-          echo "src-git awgopenwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
+          wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
+          echo "src-git awg-immortalwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
+          cat ./feeds.conf
           ./scripts/feeds update && ./scripts/feeds install -a
 
           # Setup config with AWG and dependencies
-          wget https://downloads.immortalwrt.org//snapshots/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/config.buildinfo -O .config
+          wget https://downloads.immortalwrt.org//releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/config.buildinfo -O .config
           echo "CONFIG_PACKAGE_kmod-amneziawg=m" >> .config
           echo "CONFIG_PACKAGE_amneziawg-tools=y" >> .config
           echo "CONFIG_PACKAGE_luci-app-amneziawg=y" >> .config
@@ -135,7 +127,7 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          tag_name=${{ env.VERSION }}
+          tag_name=${{ inputs.tag_name }}
           mkdir -p awgrelease
           postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools_*.ipk awgrelease/amneziawg-tools_${postfix}.ipk
@@ -145,5 +137,5 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ env.VERSION }}
+          tag_name: ${{ inputs.tag_name }}
           files: awgrelease/*.ipk
