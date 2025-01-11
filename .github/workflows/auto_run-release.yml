@@ -35,22 +35,23 @@ jobs:
       - name: Check saved release tag
         id: check_tag
         run: |
-          echo "Comparing the saved release tag with the latest release tag."
-          if [ -f saved_release_tag.txt ]; then
-            SAVED_TAG=$(cat saved_release_tag.txt) # Читаем сохраненный тэг
-            LATEST_TAG="${{ steps.get_release.outputs.release_tag }}" # Берем последний тэг
+            echo "Comparing the saved release tag with the latest release tag."
+            if [ -f saved_release_tag.txt ]; then
+            SAVED_TAG=$(cat saved_release_tag.txt) # Read the saved tag
+            LATEST_TAG="v24.10.0-rc3" # Use the latest tag
             echo "Saved Tag: $SAVED_TAG"
             echo "Latest Tag: $LATEST_TAG"
             if [ "$SAVED_TAG" == "$LATEST_TAG" ]; then
-              echo "Tags match. Proceeding."
-              echo "can_proceed=true" >> $GITHUB_OUTPUT
+            echo "Tags match. Proceeding."
+            echo "can_proceed=true" >> $GITHUB_OUTPUT
             else
-              echo "Tags do not match. Not proceeding."
+              echo "Tags do not match. Not proceeding." 
               echo "can_proceed=false" >> $GITHUB_OUTPUT
             fi
-          else
-            echo "The saved_release_tag.txt file does not exist. Cannot proceed."
-            echo "can_proceed=false" >> $GITHUB_OUTPUT
+            else
+             echo "The saved_release_tag.txt file does not exist. Cannot proceed."
+             echo "can_proceed=false" >> $GITHUB_OUTPUT
+            fi
             
       - name: Save RELEASE_TAG to file every time
         run: |
