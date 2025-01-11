@@ -56,7 +56,7 @@ jobs:
                 echo "Tag matches and is not older than 40 hours. Proceeding."
                 echo "can_proceed=true" >> $GITHUB_OUTPUT
               else
-                echo "Tag matches but is older than 36 hours. Stopping."
+                echo "Tag matches but is older than 40 hours. Stopping."
                 echo "can_proceed=false" >> $GITHUB_OUTPUT
               fi
             else
