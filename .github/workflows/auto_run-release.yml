@@ -57,7 +57,7 @@ jobs:
           echo "Сохранен тег для следующего запуска: ${RELEASE_TAG}"
 
       - name: Создание релиза в вашем репозитории
-        if: steps.check_release.outputs.release_exists == 'false' && steps.check_saved_state.outcome != 'success'       
+        if: steps.check_release.outputs.release_exists == 'false'       
         run: |
           ART="
           \`\`\`
