@@ -22,7 +22,6 @@ jobs:
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
           RELEASE_DATE=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/releases/tags/$RELEASE_TAG | jq -r '.published_at')
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
-          echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
 
       - name: Check if release exists in your repo
         id: check_release
@@ -34,20 +33,23 @@ jobs:
             echo "release_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Save RELEASE_TAG and DATE to file every time
+      - name: Save RELEASE_TAG and current DATE to file every time
         run: |
           git checkout master
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+ 
+          # Получаем текущую дату
+          CURRENT_DATE=$(date +%Y-%m-%d)
 
-          # Сохраняем тег и временную метку в файл
-          echo "${{ steps.get_release.outputs.release_tag }},${{ steps.get_release.outputs.release_date }}" > saved_release_metadata.txt
-          
+          # Сохраняем тег и текущую дату в файл
+          echo "${{ steps.get_release.outputs.release_tag }},$CURRENT_DATE" > saved_release_metadata.txt
+         
           # Добавляем и пушим изменения
           git add saved_release_metadata.txt
-          git commit --allow-empty -m "Update release metadata with tag and timestamp"
+          git commit --allow-empty -m "Update release metadata with tag and current date"
           git push origin master
-
+    
       - name: Check saved release tag and timestamp
         id: check_metadata
         run: |
