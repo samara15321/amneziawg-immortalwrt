@@ -84,3 +84,10 @@ jobs:
             "body": "A M N E Z I A   W I R E G U A R D: ImmortalWrt $LATEST_RELEASE"
           }
           EOF
+          
+  run-build:
+    needs: sync-releases
+    if: needs.sync-releases.outputs.release_exists == 'false'
+    uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
+    with:
+      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
