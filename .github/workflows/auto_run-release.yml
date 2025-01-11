@@ -90,6 +90,7 @@ jobs:
       - name: Set release_tag output
         run: |
          echo "::set-output name=release_tag::${{ needs.sync-releases.outputs.release_tag }}"
+         echo "Calling second workflow with tag_name = ${{ needs.sync-releases.outputs.release_tag }}"
         
   run-build:
     needs: check-saved-tag
@@ -97,5 +98,3 @@ jobs:
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
       tag_name: ${{ needs.sync-releases.outputs.release_tag }}
-      run: |
-       echo "Calling second workflow with tag_name = ${{ needs.sync-releases.outputs.release_tag }}"
