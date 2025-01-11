@@ -19,18 +19,17 @@ jobs:
         id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          echo "::set-output name=release_tag::$RELEASE_TAG"
-          
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+
       - name: Check if release exists in your repo
         id: check_release
         run: |
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }})
           if [ "$RESPONSE" -eq 200 ]; then
-            echo "::set-output name=release_exists::true"
+            echo "release_exists=true" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=release_exists::false"
-          fi
-          
+            echo "release_exists=false" >> $GITHUB_OUTPUT
+
       - name: Save RELEASE_TAG to file every time
         run: |
           # Ensure we are working on the master branch
@@ -64,6 +63,7 @@ jobs:
     needs: sync-releases
     outputs:
       can_proceed: ${{ steps.check_tag.outputs.can_proceed }}
+      release_tag: ${{ steps.set_release_tag.outputs.release_tag }}
     steps:
       - name: Checkout your repo
         uses: actions/checkout@v4
@@ -75,26 +75,26 @@ jobs:
             SAVED_TAG=$(cat saved_release_tag.txt)
             LATEST_TAG="${{ needs.sync-releases.outputs.release_tag }}"
             if [ "$SAVED_TAG" == "$LATEST_TAG" ]; then
-              echo "::set-output name=can_proceed::true"
+              echo "can_proceed=true" >> $GITHUB_OUTPUT
             else
-              echo "::set-output name=can_proceed::false"
+              echo "can_proceed=false" >> $GITHUB_OUTPUT
             fi
           else
-            echo "::set-output name=can_proceed::false"
-          fi
-          
+            echo "can_proceed=false" >> $GITHUB_OUTPUT
+
       - name: Print the release_tag being passed
         run: |
-         echo "Release Tag being passed: ${{ needs.sync-releases.outputs.release_tag }}"
-         
+          echo "Release Tag being passed: ${{ needs.sync-releases.outputs.release_tag }}"
+          
       - name: Set release_tag output
+        id: set_release_tag
         run: |
-         echo "::set-output name=release_tag::${{ needs.sync-releases.outputs.release_tag }}"
-         echo "Calling second workflow with tag_name = ${{ needs.sync-releases.outputs.release_tag }}"
+          echo "release_tag=${{ needs.sync-releases.outputs.release_tag }}" >> $GITHUB_OUTPUT
+          echo "Calling second workflow with tag_name=${{ needs.sync-releases.outputs.release_tag }}"
         
   run-build:
-    needs: sync-releases
+    needs: check-saved-tag
     if: needs.check-saved-tag.outputs.can_proceed == 'true'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
-      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
+      tag_name: ${{ needs.check-saved-tag.outputs.release_tag }}
