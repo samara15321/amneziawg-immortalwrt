@@ -8,80 +8,43 @@ on:
 jobs:
   sync-releases:
     runs-on: ubuntu-latest
+    outputs:
+      release_exists: ${{ steps.check_release.outputs.release_exists }}
+      release_tag: ${{ steps.get_release.outputs.release_tag }}
     steps:
-      - name: Checkout repo
+      - name: Checkout your repo
         uses: actions/checkout@v4
 
-      - name: Read saved release tag
-        id: read_saved_tag
-        run: |
-          SAVED_RELEASE=""
-          if [ -f saved_release_tag.txt ] && [ -s saved_release_tag.txt ]; then
-            SAVED_RELEASE=$(cat saved_release_tag.txt)
-          fi
-          echo "saved_release=$SAVED_RELEASE" >> $GITHUB_OUTPUT
-
-      - name: Fetch latest release tag from ImmortalWRT
-        id: fetch_latest_release
+      - name: Get the latest release from OpenWRT
+        id: get_release
         run: |
           RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-
-          if [ -z "$RELEASE_TAG" ]; then
-            echo "Error: No tags found in ImmortalWRT repository!"
-            exit 1
-          fi
-
-          echo "Latest release tag is: $RELEASE_TAG"
-          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
-
-      - name: Compare release tags
-        id: compare_tags
-        run: |
-          if [[ "${{ steps.read_saved_tag.outputs.saved_release }}" == "${{ steps.fetch_latest_release.outputs.release_tag }}" ]]; then
-            echo "SKIP=true" >> $GITHUB_OUTPUT
-          else
-            echo "SKIP=false" >> $GITHUB_OUTPUT
-          fi
-
+          echo "::set-output name=release_tag::$RELEASE_TAG"
       - name: Check if release exists in your repo
-        id: check_release_exists
+        id: check_release
         run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.fetch_latest_release.outputs.release_tag }}")
-
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/${{ steps.get_release.outputs.release_tag }})
           if [ "$RESPONSE" -eq 200 ]; then
-            echo "release_exists=true" >> $GITHUB_OUTPUT
+            echo "::set-output name=release_exists::true"
           else
-            echo "release_exists=false" >> $GITHUB_OUTPUT
+            echo "::set-output name=release_exists::false"
           fi
-
       - name: Create release in your repo
-        if: ${{ steps.check_release_exists.outputs.release_exists == 'false' && steps.compare_tags.outputs.SKIP == 'false' }}
+        if: steps.check_release.outputs.release_exists == 'false'
         run: |
-          curl -X POST \
+          curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d @- https://api.github.com/repos/samara15321/awg-immortalwrt/releases <<EOF
+            -d @- <<EOF
           {
-            "tag_name": "${{ steps.fetch_latest_release.outputs.release_tag }}",
-            "name": "ImmortalWrt ${{ steps.fetch_latest_release.outputs.release_tag }}",
-            "body": "ImmortalWrt: ${{ steps.fetch_latest_release.outputs.release_tag }}"
+            "tag_name": "${{ steps.get_release.outputs.release_tag }}",
+            "name": "ImmortalWrt ${{ steps.get_release.outputs.release_tag }}",
+            "body": "A M N E Z I A W I R E G U A R D\n--------------------------------------\nImmortalWrt ${{ steps.get_release.outputs.release_tag }}\n--------------------------------------"
           }
           EOF
-
-      - name: Save latest release tag
-        if: ${{ steps.check_release_exists.outputs.release_exists == 'false' && steps.compare_tags.outputs.SKIP == 'false' }}
-        run: |
-          echo "${{ steps.fetch_latest_release.outputs.release_tag }}" > saved_release_tag.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add saved_release_tag.txt
-          git commit -m "Update saved_release_tag to ${{ steps.fetch_latest_release.outputs.release_tag }}"
-          git push
-
   run-build:
     needs: sync-releases
-    if: ${{ needs.sync-releases.outputs.SKIP == 'false' && needs.sync-releases.outputs.release_exists == 'false' }}
+    if: needs.sync-releases.outputs.release_exists == 'false'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
       tag_name: ${{ needs.sync-releases.outputs.release_tag }}
