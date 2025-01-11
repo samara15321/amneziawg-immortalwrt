@@ -42,7 +42,7 @@ jobs:
           echo "${{ steps.get_release.outputs.release_tag }}" > saved_release_tag.txt
           # Add the file, commit, and push the changes
           git add saved_release_tag.txt
-          git commit -m "Update saved_release_tag.txt with new release tag"
+          git commit --allow-empty -m "Update saved_release_tag.txt with new release tag"
           git push origin master
 
       - name: Create release in your repo
