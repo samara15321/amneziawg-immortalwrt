@@ -21,6 +21,12 @@ jobs:
         with:
           node-version: '20.16.0'
           
+      - name: Debug Input Tag Name
+        run: |
+          echo "Received tag_name: ${{ inputs.tag_name }}"
+          echo "Setting VERSION environment variable."
+          echo "VERSION=${{ inputs.tag_name }}" >> $GITHUB_ENV
+          
       - name: Get OpenWRT version from tag_name
         id: get_version
         run: |
