@@ -70,7 +70,7 @@ jobs:
           EOF
 
       - name: Save latest release tag
-        if: ${{ steps.compare_tags.outputs.SKIP == 'false' }}
+        if: ${{ steps.check_release_exists.outputs.release_exists == 'false' && steps.compare_tags.outputs.SKIP == 'false' }}
         run: |
           echo "${{ steps.fetch_latest_release.outputs.release_tag }}" > saved_release_tag.txt
           git config user.name "github-actions[bot]"
