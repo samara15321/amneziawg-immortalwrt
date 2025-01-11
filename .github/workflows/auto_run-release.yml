@@ -59,7 +59,7 @@ jobs:
           }
           EOF
 
- check-saved-tag:
+  check-saved-tag:
     runs-on: ubuntu-latest
     needs: sync-releases
     outputs:
@@ -88,17 +88,17 @@ jobs:
             echo "The saved_release_tag.txt file does not exist. Cannot proceed."
             echo "can_proceed=false" >> $GITHUB_OUTPUT
           fi
-          
+
       - name: Print the release_tag being passed
         run: |
           echo "Release Tag being passed: ${{ needs.sync-releases.outputs.release_tag }}"
-          
+
       - name: Set release_tag output
         id: set_release_tag
         run: |
           echo "release_tag=${{ needs.sync-releases.outputs.release_tag }}" >> $GITHUB_OUTPUT
           echo "Calling second workflow with tag_name=${{ needs.sync-releases.outputs.release_tag }}"
-        
+
   run-build:
     needs: check-saved-tag
     if: needs.check-saved-tag.outputs.can_proceed == 'true'
