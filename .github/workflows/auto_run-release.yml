@@ -40,30 +40,28 @@ jobs:
       - name: Create release in your repo
         if: env.release_exists == 'false'
         run: |
-          # Формирование текста описания релиза
           ART="A M N E Z I A   W I R E G U A R D\n--------------------------------------\nImmortalWrt ${{ env.release_tag }}\n--------------------------------------"
-          BODY=$(echo -e "$ART" | tr '\n' '\\n' | sed 's/"/\\"/g') # Замена переносов строк и экранирование кавычек
+          BODY=$(printf '%s' "$ART" | jq -R '.' | sed ':a;N;$!ba;s/\n/\\n/g')
 
-          # Вывод JSON для отладки
+          # Проверка для отладки
           echo "Generated JSON:"
           echo "{
             \"tag_name\": \"${{ env.release_tag }}\",
             \"name\": \"ImmortalWrt ${{ env.release_tag }}\",
-            \"body\": \"$BODY\"
+            \"body\": $BODY
           }"
 
-          # Отправка запроса к GitHub API
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{
               \"tag_name\": \"${{ env.release_tag }}\",
               \"name\": \"ImmortalWrt ${{ env.release_tag }}\",
-              \"body\": \"$BODY\"
+              \"body\": $BODY
             }"
         env:
           release_tag: ${{ env.release_tag }}
-
+          
   # Дополнительное задание: Построение (Build)
   run-build:
     needs: sync-releases
