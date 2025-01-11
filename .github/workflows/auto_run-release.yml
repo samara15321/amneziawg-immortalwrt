@@ -39,7 +39,11 @@ jobs:
           git checkout master
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+
+          # Сохраняем тег и временную метку в файл
           echo "${{ steps.get_release.outputs.release_tag }},${{ steps.get_release.outputs.release_date }}" > saved_release_metadata.txt
+          
+          # Добавляем и пушим изменения
           git add saved_release_metadata.txt
           git commit --allow-empty -m "Update release metadata with tag and timestamp"
           git push origin master
@@ -49,6 +53,7 @@ jobs:
         run: |
           echo "Comparing the saved release tag and its timestamp."
           if [ -f saved_release_metadata.txt ]; then
+            # Разделяем файл на тег и дату
             IFS=',' read SAVED_TAG SAVED_DATE < saved_release_metadata.txt
             LATEST_TAG="${{ steps.get_release.outputs.release_tag }}"
             LATEST_DATE="${{ steps.get_release.outputs.release_date }}"
@@ -57,9 +62,11 @@ jobs:
             echo "Saved Date: $SAVED_DATE"
             echo "Latest Date: $LATEST_DATE"
 
+            # Проверка совпадения тегов
             if [ "$SAVED_TAG" == "$LATEST_TAG" ]; then
+              
+              # Преобразуем дату в метку времени и сравниваем возраст
               SAVED_EPOCH=$(date -d "$SAVED_DATE" +%s)
-              LATEST_EPOCH=$(date -d "$LATEST_DATE" +%s)
               CURRENT_TIME=$(date +%s)
               AGE=$(( (CURRENT_TIME - SAVED_EPOCH) / 3600 ))
 
@@ -70,6 +77,7 @@ jobs:
                 echo "Tag matches but is older than 36 hours. Stopping."
                 echo "can_proceed=false" >> $GITHUB_OUTPUT
               fi
+
             else
               echo "Tags do not match. Not proceeding."
               echo "can_proceed=false" >> $GITHUB_OUTPUT
