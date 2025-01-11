@@ -56,21 +56,16 @@ jobs:
           echo "${RELEASE_TAG}" > saved_release_tag.txt
           echo "Сохранен тег для следующего запуска: ${RELEASE_TAG}"
 
-      - name: Принудительное завершение (если релиз отсутствует)
-        if: steps.check_release.outputs.release_exists == 'false'
-        run: |
-          echo "Релиз еще отсутствует в вашем репозитории. Завершаем выполнение."
-          exit 0
-
       - name: Создание релиза в вашем репозитории
-        if: steps.check_saved_state.conclusion != 'success'
+        if: steps.check_release.outputs.release_exists == 'false' && ! steps.check_saved_state.conclusion == 'success'
         run: |
-          ART="\\\`\`\`
+          ART="
+          \`\`\`
                             AMNEZIA WIREGUARD
           -----------------------------------------------------
                             ImmortalWRT ${RELEASE_TAG}
           -----------------------------------------------------
-          \\\`\`\`"
+          \`\`\`"
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
