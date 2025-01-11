@@ -31,6 +31,42 @@ jobs:
           else
             echo "release_exists=false" >> $GITHUB_OUTPUT
           fi
+          
+      - name: Check saved release tag and timestamp
+        id: check_metadata
+        run: |
+          echo "Comparing the saved release tag and its timestamp."
+          if [ -f saved_release_metadata.txt ]; then
+            # Разделяем файл на тег и дату
+            IFS=',' read SAVED_TAG SAVED_DATE < saved_release_metadata.txt
+            LATEST_TAG="${{ steps.get_release.outputs.release_tag }}"
+            LATEST_DATE="${{ steps.get_release.outputs.release_date }}"
+            echo "Saved Tag: $SAVED_TAG"
+            echo "Latest Tag: $LATEST_TAG"
+            echo "Saved Date: $SAVED_DATE"
+            echo "Latest Date: $LATEST_DATE"
+            # Проверка совпадения тегов
+            if [ "$SAVED_TAG" == "$LATEST_TAG" ]; then
+              
+              # Преобразуем дату в метку времени и сравниваем возраст
+              SAVED_EPOCH=$(date -d "$SAVED_DATE" +%s)
+              CURRENT_TIME=$(date +%s)
+              AGE=$(( (CURRENT_TIME - SAVED_EPOCH) / 3600 ))
+              if (( AGE <= 36 )); then
+                echo "Tag matches and is not older than 36 hours. Proceeding."
+                echo "can_proceed=true" >> $GITHUB_OUTPUT
+              else
+                echo "Tag matches but is older than 36 hours. Stopping."
+                echo "can_proceed=false" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "Tags do not match. Not proceeding."
+              echo "can_proceed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "The saved_release_metadata.txt file does not exist. Cannot proceed."
+            echo "can_proceed=false" >> $GITHUB_OUTPUT
+          fi
     
       - name: Save RELEASE_TAG and current DATE to file only if changed
         run: |
