@@ -32,23 +32,6 @@ jobs:
           else
             echo "release_exists=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Save RELEASE_TAG and current DATE to file every time
-        run: |
-          git checkout master
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
- 
-          # Получаем текущую дату
-          CURRENT_DATE=$(date +%Y-%m-%d)
-
-          # Сохраняем тег и текущую дату в файл
-          echo "${{ steps.get_release.outputs.release_tag }},$CURRENT_DATE" > saved_release_metadata.txt
-         
-          # Добавляем и пушим изменения
-          git add saved_release_metadata.txt
-          git commit --allow-empty -m "Update release metadata with tag and current date"
-          git push origin master
     
       - name: Check saved release tag and timestamp
         id: check_metadata
@@ -88,7 +71,24 @@ jobs:
             echo "The saved_release_metadata.txt file does not exist. Cannot proceed."
             echo "can_proceed=false" >> $GITHUB_OUTPUT
           fi
+          
+      - name: Save RELEASE_TAG and current DATE to file every time
+        run: |
+          git checkout master
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+ 
+          # Получаем текущую дату
+          CURRENT_DATE=$(date +%Y-%m-%d)
 
+          # Сохраняем тег и текущую дату в файл
+          echo "${{ steps.get_release.outputs.release_tag }},$CURRENT_DATE" > saved_release_metadata.txt
+         
+          # Добавляем и пушим изменения
+          git add saved_release_metadata.txt
+          git commit --allow-empty -m "Update release metadata with tag and current date"
+          git push origin master
+          
       - name: Create release in your repo
         if: steps.check_release.outputs.release_exists == 'false' && steps.check_metadata.outputs.can_proceed == 'true'
         run: |
