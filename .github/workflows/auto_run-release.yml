@@ -31,6 +31,14 @@ jobs:
             echo "::set-output name=release_exists::false"
           fi
 
+      - name: Save RELEASE_TAG to file if it does not exist
+        if: steps.check_release.outputs.release_exists == 'false'
+        run: |
+          echo "${{ steps.get_release.outputs.release_tag }}" > saved_release_tag.txt
+          git add saved_release_tag.txt
+          git commit -m "Update saved_release_tag.txt"
+          git push
+
       - name: Create release in your repo
         if: steps.check_release.outputs.release_exists == 'false'
         run: |
@@ -45,9 +53,33 @@ jobs:
           }
           EOF
 
-  run-build:
+  check-saved-tag:
+    runs-on: ubuntu-latest
     needs: sync-releases
-    if: needs.sync-releases.outputs.release_exists == 'false'
+    outputs:
+      can_proceed: ${{ steps.check_tag.outputs.can_proceed }}
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v4
+
+      - name: Check saved release tag
+        id: check_tag
+        run: |
+          if [ -f saved_release_tag.txt ]; then
+            SAVED_TAG=$(cat saved_release_tag.txt)
+            LATEST_TAG="${{ needs.sync-releases.outputs.release_tag }}"
+            if [ "$SAVED_TAG" == "$LATEST_TAG" ]; then
+              echo "::set-output name=can_proceed::true"
+            else
+              echo "::set-output name=can_proceed::false"
+            fi
+          else
+            echo "::set-output name=can_proceed::false"
+          fi
+
+  run-build:
+    needs: check-saved-tag
+    if: needs.check-saved-tag.outputs.can_proceed == 'true'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
       tag_name: ${{ needs.sync-releases.outputs.release_tag }}
