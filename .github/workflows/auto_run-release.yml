@@ -93,8 +93,8 @@ jobs:
          echo "Calling second workflow with tag_name = ${{ needs.sync-releases.outputs.release_tag }}"
         
   run-build:
-    needs: check-saved-tag
+    needs: sync-releases
     if: needs.check-saved-tag.outputs.can_proceed == 'true'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
-      tag_name: ${{ steps.get_release.outputs.release_tag }}
+      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
