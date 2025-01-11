@@ -31,24 +31,25 @@ jobs:
             echo "release_exists=true" >> $GITHUB_ENV
           fi
        
-      - name: Create release in your repo
+      - name: Создание релиза в вашем репозитории
         if: env.release_exists == 'false'
         run: |
-          ART="
+          echo "Начинаю создание релиза для тега ${RELEASE_TAG}"
+          ART=$(cat <<-END
           \`\`\`
-                   A M N E Z I A   W I R E G U A R D
+                            AMNEZIA WIREGUARD
           -----------------------------------------------------
-                   ImmortalWrt ${{ env.release_tag }}
+                            ImmortalWRT ${RELEASE_TAG}
           -----------------------------------------------------
-          \`\`\`"
+          \`\`\`
+          END
+          )
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-                "tag_name": "${{ env.release_tag }}",
-                "name": "ImmortalWrt ${{ env.release_tag }}",
-                "body": "'"${ART//\"/\\\"}"'"
-              }'
+            --data '{"tag_name": "'"${RELEASE_TAG}"'",
+                      "name": "ImmortalWrt '"${RELEASE_TAG}"'",
+                      "body": "'"$(echo "$ART" | sed 's/"/\\"/g' | tr '\n' '\\n')"'" }'
               
   run-build:
     needs: sync-releases
