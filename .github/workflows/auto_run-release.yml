@@ -69,10 +69,10 @@ jobs:
           \`\`\`
                    A M N E Z I A   W I R E G U A R D
           -----------------------------------------------------
-                   OpenWrt ${{ env.release_tag }}
+                   ImmortalWrt ${{ env.release_tag }}
           -----------------------------------------------------
           \`\`\`"
-          curl -X POST https://api.github.com/repos/samara1531/awg-openwrt/releases \
+          curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{
