@@ -2,81 +2,69 @@ name: Auto_Sync OpenWRT Releases
 
 on:
   schedule:
-    - cron: '30 23 */8 * *' # Запуск каждые 8 дней в 23:30
-  workflow_dispatch: # Возможность ручного запуска
+    - cron: '30 23 */1 * *'
+  workflow_dispatch:
 
 jobs:
   sync-releases:
     runs-on: ubuntu-latest
     steps:
-      # 1. Клонируем репозиторий
-      - name: Checkout the repo
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2. Проверяем сохранённый тег релиза
       - name: Read saved release tag
         id: read_saved_tag
         run: |
+          SAVED_RELEASE=""
           if [ -f saved_release_tag.txt ] && [ -s saved_release_tag.txt ]; then
             SAVED_RELEASE=$(cat saved_release_tag.txt)
-            echo "Saved release tag: $SAVED_RELEASE"
-            echo "SAVED_RELEASE=$SAVED_RELEASE" >> $GITHUB_ENV
-          else
-            echo "No saved release tag found OR file is empty. Assuming this is the first run."
-            echo "SAVED_RELEASE=" >> $GITHUB_ENV
           fi
+          echo "saved_release=$SAVED_RELEASE" >> $GITHUB_OUTPUT
 
-      # 3. Получаем последний релиз с ImmortalWRT
       - name: Fetch latest release from ImmortalWRT
-        id: fetch_latest_release
         run: |
-          RELEASE_TAG=$(curl -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
-          echo "Latest release tag from ImmortalWRT: $RELEASE_TAG"
+          RELEASE_TAG=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -s https://api.github.com/repos/immortalwrt/immortalwrt/tags | jq -r '.[0].name')
+
           echo "LATEST_RELEASE=$RELEASE_TAG" >> $GITHUB_ENV
 
-      # 4. Сравниваем сохраненный тег и новый
       - name: Compare release tags
-        id: compare_tags
         run: |
-          if [ "$SAVED_RELEASE" == "$LATEST_RELEASE" ]; then
-            echo "The saved release ($SAVED_RELEASE) matches the latest release ($LATEST_RELEASE). Exiting."
+          if [[ "${{ steps.read_saved_tag.outputs.saved_release }}" == "$LATEST_RELEASE" ]]; then
+            echo "Releases match. Exiting."
             echo "SKIP=true" >> $GITHUB_ENV
             exit 0
           fi
-          echo "Releases do not match. Proceeding to create a new release."
+          echo "Releases differ. Proceeding."
           echo "SKIP=false" >> $GITHUB_ENV
 
-      # 5. Проверяем, существует ли релиз в вашем репозитории
       - name: Check if release exists in your repo
-        id: check_release
         run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/$LATEST_RELEASE)
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://api.github.com/repos/samara15321/awg-immortalwrt/releases/tags/$LATEST_RELEASE")
+
           if [ "$RESPONSE" -eq 200 ]; then
-            echo "Release already exists in the repo."
+            echo "Release exists. Exiting."
             echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
           else
-            echo "Release does not exist in the repo."
+            echo "Release does not exist. Proceeding."
             echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
           fi
-          outputs:
-            release_exists: ${{ steps.check_release.outputs.release_exists }}
 
-      # 7. Создаем релиз, если его еще нет
       - name: Create release in your repo
         if: env.RELEASE_EXISTS == 'false' && env.SKIP == 'false'
         run: |
-          curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
+          curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d @- <<EOF
+            -d @- https://api.github.com/repos/samara15321/awg-immortalwrt/releases <<EOF
           {
             "tag_name": "$LATEST_RELEASE",
             "name": "ImmortalWrt $LATEST_RELEASE",
-            "body": "A M N E Z I A   W I R E G U A R D: ImmortalWrt $LATEST_RELEASE"
+            "body": "**Changelog:**\n$COMMITS"
           }
           EOF
 
-      # 6. Сохранение нового тега в файл
       - name: Save latest release tag
         if: env.SKIP == 'false'
         run: |
@@ -84,12 +72,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add saved_release_tag.txt
-          git commit -m "Update saved release tag to $LATEST_RELEASE"
+          git commit -m "Update saved_release_tag to $LATEST_RELEASE"
           git push
-          
+
   run-build:
     needs: sync-releases
-    if: needs.sync-releases.outputs.release_exists == 'false'
+    if: needs.sync-releases.outputs.release_exists == 'false' && env.SKIP == 'false'
     uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
     with:
-      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
+      tag_name: ${{ env.LATEST_RELEASE }}
