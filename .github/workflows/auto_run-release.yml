@@ -33,21 +33,16 @@ jobs:
       - name: Create release in your repo
         if: env.release_exists == 'false'
         run: |
-          ART="
-          \`\`\`
-                   A M N E Z I A   W I R E G U A R D
-          -----------------------------------------------------
-                   ImmortalWrt ${{ env.release_tag }}
-          -----------------------------------------------------
-          \`\`\`"
+          ART="A M N E Z I A   W I R E G U A R D\n-----------------------------------------------------\nImmortalWrt ${{ env.release_tag }}\n-----------------------------------------------------"
+          BODY=$(echo -e "$ART" | sed 's/"/\\"/g') # Экранируем кавычки в тексте
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "tag_name": "${{ env.release_tag }}",
-                "name": "ImmortalWrt ${{ env.release_tag }}",
-                "body": "'"${ART//\"/\\\"}"'"
-              }'
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                  \"tag_name\": \"${{ env.release_tag }}\",
+                  \"name\": \"ImmortalWrt ${ART}\",
+                  \"body\": \"$BODY\"
+                }"
               
   run-build:
     needs: sync-releases
