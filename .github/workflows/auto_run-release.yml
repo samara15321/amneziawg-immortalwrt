@@ -36,6 +36,9 @@ jobs:
         run: |
           # Ensure we are working on the master branch
           git checkout master
+          # Configure Git user name and email
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
           # Save the release tag to the file
           echo "${{ steps.get_release.outputs.release_tag }}" > saved_release_tag.txt
           # Add the file, commit and push the changes
