@@ -62,24 +62,22 @@ jobs:
           echo "Релиз еще отсутствует в вашем репозитории. Завершаем выполнение."
           exit 0
 
-      - name: Create release in your repo
-        if: env.release_exists == 'false'
+      - name: Создание релиза в вашем репозитории
+        if: steps.check_saved_state.conclusion != 'success'
         run: |
-          ART="
-          \`\`\`
-                   A M N E Z I A   W I R E G U A R D
+          ART="\\\`\`\`
+                            AMNEZIA WIREGUARD
           -----------------------------------------------------
-                   ImmortalWrt ${{ env.release_tag }}
+                            ImmortalWRT ${RELEASE_TAG}
           -----------------------------------------------------
-          \`\`\`"
+          \\\`\`\`"
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-                "tag_name": "${{ env.release_tag }}",
-                "name": "OpenWrt ${{ env.release_tag }}",
-                "body": "'"${ART//\"/\\\"}"'"
-              }'
+            --data '{"tag_name": "'"${RELEASE_TAG}"'",
+                      "name": "ImmortalWrt '"${RELEASE_TAG}"'",
+                      "body": "'"${ART//\"/\\\"}"'"
+                    }'
 
   run-build:
     needs: sync-releases
