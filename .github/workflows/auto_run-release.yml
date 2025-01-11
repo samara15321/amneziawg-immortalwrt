@@ -58,17 +58,8 @@ jobs:
             echo "Release does not exist in the repo."
             echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
           fi
-
-      # 6. Сохранение нового тега в файл
-      - name: Save latest release tag
-        if: env.SKIP == 'false'
-        run: |
-          echo "$LATEST_RELEASE" > saved_release_tag.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add saved_release_tag.txt
-          git commit -m "Update saved release tag to $LATEST_RELEASE"
-          git push
+          outputs:
+            release_exists: ${{ steps.check_release.outputs.release_exists }}
 
       # 7. Создаем релиз, если его еще нет
       - name: Create release in your repo
@@ -84,6 +75,17 @@ jobs:
             "body": "A M N E Z I A   W I R E G U A R D: ImmortalWrt $LATEST_RELEASE"
           }
           EOF
+
+      # 6. Сохранение нового тега в файл
+      - name: Save latest release tag
+        if: env.SKIP == 'false'
+        run: |
+          echo "$LATEST_RELEASE" > saved_release_tag.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add saved_release_tag.txt
+          git commit -m "Update saved release tag to $LATEST_RELEASE"
+          git push
           
   run-build:
     needs: sync-releases
