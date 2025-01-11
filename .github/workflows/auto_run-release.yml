@@ -17,12 +17,12 @@ jobs:
       - name: Read saved release tag
         id: read_saved_tag
         run: |
-          if [ -f saved_release_tag.txt ]; then
+          if [ -f saved_release_tag.txt ] && [ -s saved_release_tag.txt ]; then
             SAVED_RELEASE=$(cat saved_release_tag.txt)
             echo "Saved release tag: $SAVED_RELEASE"
             echo "SAVED_RELEASE=$SAVED_RELEASE" >> $GITHUB_ENV
           else
-            echo "No saved release tag found. Assuming this is the first run."
+            echo "No saved release tag found OR file is empty. Assuming this is the first run."
             echo "SAVED_RELEASE=" >> $GITHUB_ENV
           fi
 
@@ -43,6 +43,7 @@ jobs:
             echo "SKIP=true" >> $GITHUB_ENV
             exit 0
           fi
+          echo "Releases do not match. Proceeding to create a new release."
           echo "SKIP=false" >> $GITHUB_ENV
 
       # 5. Проверяем, существует ли релиз в вашем репозитории
@@ -60,7 +61,7 @@ jobs:
 
       # 6. Сохранение нового тега в файл
       - name: Save latest release tag
-        if: env.SKIP != 'true'
+        if: env.SKIP == 'false'
         run: |
           echo "$LATEST_RELEASE" > saved_release_tag.txt
           git config user.name "github-actions[bot]"
@@ -71,7 +72,7 @@ jobs:
 
       # 7. Создаем релиз, если его еще нет
       - name: Create release in your repo
-        if: env.RELEASE_EXISTS == 'false' && env.SKIP != 'true'
+        if: env.RELEASE_EXISTS == 'false' && env.SKIP == 'false'
         run: |
           curl -X POST https://api.github.com/repos/samara15321/awg-immortalwrt/releases \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -80,13 +81,6 @@ jobs:
           {
             "tag_name": "$LATEST_RELEASE",
             "name": "ImmortalWrt $LATEST_RELEASE",
-            "body": "Auto-synced release: ImmortalWrt $LATEST_RELEASE"
+            "body": "A M N E Z I A   W I R E G U A R D: ImmortalWrt $LATEST_RELEASE"
           }
           EOF
-
-  run-build:
-    needs: sync-releases
-    if: needs.sync-releases.outputs.release_exists == 'false'
-    uses: samara15321/awg-immortalwrt/.github/workflows/auto_build.yml@master
-    with:
-      tag_name: ${{ needs.sync-releases.outputs.release_tag }}
