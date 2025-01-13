@@ -51,6 +51,18 @@ jobs:
           ref: v${{ matrix.build_env.tag }}
           fetch-depth: 0
 
+      - name: Check if package already exists
+        run: |
+          postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
+          FILE_URL="https://github.com/samara15321/releases/download/${{ inputs.tag_name }}/amneziawg-tools_${postfix}.ipk"
+          
+          if curl --output /dev/null --silent --head --fail "$FILE_URL"; then
+            echo "Package amneziawg-tools_${postfix}.ipk already exists. Stopping build."
+            exit 1
+          else
+            echo "No existing package found. Proceeding with the build."
+          fi
+          
       - name: Cache Tools and Kernel
         id: cache-tools-kernel
         uses: actions/cache@v4
