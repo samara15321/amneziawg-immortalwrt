@@ -63,7 +63,7 @@ jobs:
       - name: Check if package already exists
         run: |
           postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
-          FILE_URL="https://github.com/YOUR_REPOSITORY/releases/download/${{ inputs.tag_name }}/amneziawg-tools_${postfix}.ipk"
+          FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ inputs.tag_name }}/amneziawg-tools_${postfix}.ipk"
           
           if curl --output /dev/null --silent --head --fail "$FILE_URL"; then
             echo "Package amneziawg-tools_${postfix}.ipk already exists. Stopping build."
