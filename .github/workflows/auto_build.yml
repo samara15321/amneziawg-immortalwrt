@@ -61,15 +61,16 @@ jobs:
           key: ${{ runner.os }}-build-vm4-${{ env.cache-name }}
 
       - name: Check if package already exists
+        id: check-file
         run: |
           postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
-          FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ inputs.tag_name }}/amneziawg-tools_${postfix}.ipk"
+          FILE_URL="https://github.com/YOUR_REPOSITORY/releases/download/${{ inputs.tag_name }}/amneziawg-tools_${postfix}.ipk"
           
-          if curl --output /dev/null --silent --head --fail "$FILE_URL"; then
-            echo "Package amneziawg-tools_${postfix}.ipk already exists. Stopping build."
-            exit 1
+          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          if curl -H "Authorization: token $GITHUB_TOKEN" --output /dev/null --silent --head --fail "$FILE_URL"; then
+            echo "FILE_EXISTS=true" >> $GITHUB_ENV
           else
-            echo "No existing package found. Proceeding with the build."
+            echo "FILE_EXISTS=false" >> $GITHUB_ENV
           fi
           
       - name: Install Python3 elftools module
@@ -78,7 +79,7 @@ jobs:
           python3 -m pip install pyelftools
 
       - name: Building kernel and tools
-        #if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }}
+        if: env.FILE_EXISTS == 'false'
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
