@@ -68,7 +68,19 @@ jobs:
         run: |
           echo "Skipping job as release file already exists."
           exit 0
+          
+      - name: Get snapshot commit SHA and device ARCH
+        if: env.FILE_EXISTS == 'false'
+        run: |
+          PROFILE_URL="https://downloads.immortalwrt.org//snapshots/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/profiles.json"
+          SNAPSHOT_COMMIT_SHA=$(wget -q $PROFILE_URL -O- | tr ',' '\n' | grep "version_code"| awk -F: '{print $2}' | tr -d '"' | awk -F- '{print $2}')
+          echo "Snapshot commit sha: $SNAPSHOT_COMMIT_SHA"
+          echo "SNAPSHOT_COMMIT_SHA=$SNAPSHOT_COMMIT_SHA" >> $GITHUB_ENV
 
+          DEVICE_ARCH=$(wget -q $PROFILE_URL -O- | tr ',' '\n' | grep "arch_packages"| awk -F: '{print $2}' | tr -d '"')
+          echo "Device ARCH: $DEVICE_ARCH"
+          echo "DEVICE_ARCH=$DEVICE_ARCH" >> $GITHUB_ENV
+          
       - uses: actions/checkout@v4
         if: env.FILE_EXISTS == 'false'
         with:
@@ -81,6 +93,7 @@ jobs:
 
       - name: Building kernel and tools
         if: env.FILE_EXISTS == 'false'
+        continue-on-error: true  
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
@@ -118,6 +131,7 @@ jobs:
           VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
 
       - name: Build AmneziaWG
+        continue-on-error: true        
         run: |
           VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
           echo "Vermagic: $VERMAGIC"
@@ -133,6 +147,7 @@ jobs:
           make V=s package/amneziawg-tools/compile
 
       - name: Prepare artifacts
+        continue-on-error: true  
         if: env.FILE_EXISTS == 'false'
         run: |
           tag_name=${{ github.ref_name }}
@@ -145,6 +160,7 @@ jobs:
           cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg-*.apk awgrelease/kmod-amneziawg_${postfix}.apk
 
       - name: Delete old release assets
+        continue-on-error: true  
         if: env.FILE_EXISTS == 'false'
         run: |
           postfix="${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}"
@@ -160,6 +176,7 @@ jobs:
           done
 
       - name: Release
+        continue-on-error: true  
         if: env.FILE_EXISTS == 'false'
         uses: softprops/action-gh-release@v1
         with:
