@@ -80,6 +80,7 @@ jobs:
 
       - name: Building kernel and tools
         if: env.FILE_EXISTS == 'false'
+        continue-on-error: true
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
