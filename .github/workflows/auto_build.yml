@@ -64,7 +64,7 @@ jobs:
         id: check-file
         run: |
           postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
-          FILE_URL="https://github.com/samara15321/awg-immortalwrt/releases/download/${{ inputs.tag_name }}/amneziawg-tools_${postfix}.ipk"
+          FILE_URL="https://github.com/samara15321/amneziawg-immortalwrt/releases/download/${{ inputs.tag_name }}/amneziawg-tools_${postfix}.ipk"
           
           GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           if curl -H "Authorization: token $GITHUB_TOKEN" --output /dev/null --silent --head --fail "$FILE_URL"; then
@@ -88,7 +88,7 @@ jobs:
 
           # Setup & install feeds
           wget https://downloads.immortalwrt.org/releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/feeds.buildinfo -O feeds.conf
-          echo "src-git awgopenwrt https://github.com/samara15321/awg-immortalwrt.git" >> ./feeds.conf
+          echo "src-git amneziawg-immortalwrt https://github.com/samara15321/amneziawg-immortalwrt.git" >> ./feeds.conf
           ./scripts/feeds update && ./scripts/feeds install -a
 
           # Setup config with AWG and dependencies
