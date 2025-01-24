@@ -13,19 +13,9 @@ jobs:
     outputs:
         job-config: ${{ steps.generate-config.outputs.job-config }}
         release_tag: ${{ env.VERSION }}
-    steps:
-      - name: Setup Ubuntu
-        run: |
-          sudo apt update
-          sudo apt install -y subversion build-essential gettext 2to3 python3-pyelftools python3-distutils-extra
-          
+    steps:  
       - name: Checkout your repo
         uses: actions/checkout@v4
-        
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23.5'
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -82,7 +72,12 @@ jobs:
           else
             echo "FILE_EXISTS=false" >> $GITHUB_ENV
           fi
-
+          
+      - name: Setup Ubuntu
+        run: |
+          sudo apt update
+          sudo apt install -y subversion build-essential gettext 2to3 python3-pyelftools python3-distutils-extra
+          
       - name: Building kernel and tools
         if: env.FILE_EXISTS == 'false'
         continue-on-error: true
