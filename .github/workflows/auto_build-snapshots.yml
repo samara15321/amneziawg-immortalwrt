@@ -137,7 +137,7 @@ jobs:
           make target/linux/compile  -i -j `nproc` V=s
 
           VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
-          VERMAGIC_CLEANED=$(echo "$VERMAGIC" | cut -c7-)
+          VERMAGIC_CLEANED=$(echo "$VERMAGIC" | sed 's/^[^~]*~//')
 
           VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
 
@@ -151,7 +151,7 @@ jobs:
         continue-on-error: true
         run: |
           VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
-          VERMAGIC_CLEANED=$(echo "$VERMAGIC" | cut -c7-)
+          VERMAGIC_CLEANED=$(echo "$VERMAGIC" | sed 's/^[^~]*~//')
 
           VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
 
