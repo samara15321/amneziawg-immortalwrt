@@ -136,6 +136,9 @@ jobs:
           VERMAGIC_EXPECTED="${{ matrix.build_env.vermagic }}"
           VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/^[^~]*~//')
 
+          echo "VERMAGIC: $VERMAGIC"
+          echo "VERMAGIC_EXPECTED_CLEANED: $VERMAGIC_EXPECTED_CLEANED"
+
           if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED_CLEANED" ]; then
             echo "Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED_CLEANED"
             exit 1
@@ -148,6 +151,9 @@ jobs:
           VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
           VERMAGIC_EXPECTED="${{ matrix.build_env.vermagic }}"
           VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/^[^~]*~//')
+
+          echo "VERMAGIC: $VERMAGIC"
+          echo "VERMAGIC_EXPECTED_CLEANED: $VERMAGIC_EXPECTED_CLEANED"
 
           if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED_CLEANED" ]; then
             echo "Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED_CLEANED"
@@ -170,7 +176,7 @@ jobs:
         run: |
           tag_name=${{  github.ref_name }}
           mkdir -p awgrelease
-          postfix="${{ matrix.build_env.tag }}_${VERMAGIC}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
+          postfix="${{ matrix.build_env.tag }}_${{ matrix.build_env.vermagic }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/amneziawg-tools-*.apk awgrelease/amneziawg-tools_${postfix}.apk
           cp bin/packages/${{ matrix.build_env.pkgarch }}/awgopenwrt/luci-app-amneziawg-*.apk awgrelease/luci-app-amneziawg_${postfix}.apk
           cp bin/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/packages/kmod-amneziawg-*.apk awgrelease/kmod-amneziawg_${postfix}.apk
