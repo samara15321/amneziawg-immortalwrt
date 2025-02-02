@@ -136,11 +136,13 @@ jobs:
           echo "    > make target/linux/compile"
           make target/linux/compile  -i -j `nproc` V=s
 
-          VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
+          VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
+          VERMAGIC_CLEANED=$(echo "$VERMAGIC" | cut -c7-)
+
           VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
 
-          if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED" ]; then
-            echo Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED
+          if [ "$VERMAGIC_CLEANED" != "$VERMAGIC_EXPECTED" ]; then
+            echo "Vermagic mismatch: $VERMAGIC_CLEANED, expected $VERMAGIC_EXPECTED"
             exit 1
           fi
 
@@ -148,13 +150,13 @@ jobs:
         if: env.FILE_EXISTS == 'false'
         continue-on-error: true
         run: |
-          VERMAGIC=`cat ./build_dir/target-*/linux-*/linux-*/.vermagic`
-          echo "Vermagic: $VERMAGIC"
+          VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
+          VERMAGIC_CLEANED=$(echo "$VERMAGIC" | cut -c7-)
 
           VERMAGIC_EXPECTED=${{ matrix.build_env.vermagic }}
 
-          if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED" ]; then
-            echo Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED
+          if [ "$VERMAGIC_CLEANED" != "$VERMAGIC_EXPECTED" ]; then
+            echo "Vermagic mismatch: $VERMAGIC_CLEANED, expected $VERMAGIC_EXPECTED"
             exit 1
           fi
 
