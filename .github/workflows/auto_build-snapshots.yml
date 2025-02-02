@@ -154,12 +154,10 @@ jobs:
 
           echo "VERMAGIC: $VERMAGIC"
           echo "VERMAGIC_EXPECTED_CLEANED: $VERMAGIC_EXPECTED_CLEANED"
-
+          
           if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED_CLEANED" ]; then
             echo "Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED_CLEANED"
-            echo "VERMAGIC_MATCH=false" >> $GITHUB_ENV
-          else
-            echo "VERMAGIC_MATCH=true" >> $GITHUB_ENV
+            exit 1
           fi
 
           # Ignore kmod build for some targets, replace with the awg-go
