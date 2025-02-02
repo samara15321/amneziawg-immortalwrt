@@ -46,22 +46,14 @@ jobs:
       - name: Check if release file exists
         id: check_release
         run: |
-          # Определяем переменную TAG
-          TAG="${{ matrix.build_env.tag }}"
-
-          # Формируем postfix с использованием всех необходимых переменных
-          postfix="${TAG}_${{ matrix.build_env.vermagic }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}"
-
-          # Формируем полное имя файла
+          # Формируем имя файла с заменой ~ на .
+          vermagic_cleaned=$(echo "${{ matrix.build_env.vermagic }}" | sed 's/~/\./g')
+          postfix="${{ matrix.build_env.tag }}_${vermagic_cleaned}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
           RELEASE_FILE="kmod-amneziawg_${postfix}.apk"
-
-          # Преобразуем точку обратно в тильду для сравнения
-          RELEASE_FILE_CHECK="${RELEASE_FILE//./~}"
-
-          echo "Checking for release file: $RELEASE_FILE_CHECK in release: $TAG"
-
-          # Проверяем наличие файла в релизе
-          if gh release view "$TAG" --repo samara15321/amneziawg-immortalwrt --json assets --jq ".assets | .[].name" | grep -q "$RELEASE_FILE_CHECK"; then
+          TAG=${{ matrix.build_env.tag }}
+          echo "Checking for release file: $RELEASE_FILE in release: $TAG"
+          # Используем GitHub CLI для проверки наличия файла в релизе
+          if gh release view "$TAG" --repo samara15321/amneziawg-immortalwrt --json assets --jq ".assets | .[].name" | grep -q "$RELEASE_FILE"; then
             echo "Release file $RELEASE_FILE already exists. Skipping job."
             echo "FILE_EXISTS=true" >> $GITHUB_ENV
           else
@@ -142,7 +134,7 @@ jobs:
 
           VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
           VERMAGIC_EXPECTED="${{ matrix.build_env.vermagic }}"
-          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/^[^~]*~//')
+          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/~/\./g')
 
           if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED_CLEANED" ]; then
             echo "Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED_CLEANED"
@@ -155,7 +147,7 @@ jobs:
         run: |
           VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
           VERMAGIC_EXPECTED="${{ matrix.build_env.vermagic }}"
-          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/^[^~]*~//')
+          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/~/\./g')
 
           echo "VERMAGIC: $VERMAGIC"
           echo "VERMAGIC_EXPECTED_CLEANED: $VERMAGIC_EXPECTED_CLEANED"
