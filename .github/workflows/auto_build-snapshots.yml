@@ -46,12 +46,21 @@ jobs:
       - name: Check if release file exists
         id: check_release
         run: |
-          TAG=${{ matrix.build_env.tag }}
-          postfix="${{ matrix.build_env.tag }}_${{ matrix.build_env.vermagic }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
+          # Определяем переменную TAG
+          TAG="${{ matrix.build_env.tag }}"
+
+          # Формируем postfix с использованием всех необходимых переменных
+          postfix="${TAG}_${{ matrix.build_env.vermagic }}_${{ matrix.build_env.pkgarch }}_${{ matrix.build_env.target }}_${{ matrix.build_env.subtarget }}"
+
+          # Формируем полное имя файла
           RELEASE_FILE="kmod-amneziawg_${postfix}.apk"
-          RELEASE_FILE_CHECK="${RELEASE_FILE//./~}" # Преобразуем точку обратно в тильду для проверки
+
+          # Преобразуем точку обратно в тильду для сравнения
+          RELEASE_FILE_CHECK="${RELEASE_FILE//./~}"
+
           echo "Checking for release file: $RELEASE_FILE_CHECK in release: $TAG"
 
+          # Проверяем наличие файла в релизе
           if gh release view "$TAG" --repo samara15321/amneziawg-immortalwrt --json assets --jq ".assets | .[].name" | grep -q "$RELEASE_FILE_CHECK"; then
             echo "Release file $RELEASE_FILE already exists. Skipping job."
             echo "FILE_EXISTS=true" >> $GITHUB_ENV
