@@ -76,6 +76,7 @@ jobs:
 
           echo "Snapshot commit SHA: $SNAPSHOT_COMMIT_SHA"
           echo "SNAPSHOT_COMMIT_SHA=$SNAPSHOT_COMMIT_SHA" >> $GITHUB_ENV
+          echo "DEVICE_ARCH=${{ matrix.build_env.pkgarch }}" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         if: env.FILE_EXISTS == 'false'
