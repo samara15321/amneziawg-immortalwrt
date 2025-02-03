@@ -72,14 +72,10 @@ jobs:
         if: env.FILE_EXISTS == 'false'
         continue-on-error: true
         run: |
-          PROFILE_URL="https://downloads.immortalwrt.org/snapshots/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/profiles.json"
-          SNAPSHOT_COMMIT_SHA=$(wget -q $PROFILE_URL -O- | tr ',' '\n' | grep "version_code"| awk -F: '{print $2}' | tr -d '"' | awk -F- '{print $2}')
-          echo "Snapshot commit sha: $SNAPSHOT_COMMIT_SHA"
-          echo "SNAPSHOT_COMMIT_SHA=$SNAPSHOT_COMMIT_SHA" >> $GITHUB_ENV
+          SNAPSHOT_COMMIT_SHA=$(wget -qO- "https://downloads.immortalwrt.org/snapshots/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/version.buildinfo" | cut -d'-' -f2)
 
-          DEVICE_ARCH=$(wget -q $PROFILE_URL -O- | tr ',' '\n' | grep "arch_packages"| awk -F: '{print $2}' | tr -d '"')
-          echo "Device ARCH: $DEVICE_ARCH"
-          echo "DEVICE_ARCH=$DEVICE_ARCH" >> $GITHUB_ENV
+          echo "Snapshot commit SHA: $SNAPSHOT_COMMIT_SHA"
+          echo "SNAPSHOT_COMMIT_SHA=$SNAPSHOT_COMMIT_SHA" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         if: env.FILE_EXISTS == 'false'
@@ -134,7 +130,7 @@ jobs:
 
           VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
           VERMAGIC_EXPECTED="${{ matrix.build_env.vermagic }}"
-          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/~/\./g')
+          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/^[^\.]*\.[^\.]*\.[^\.]*\.//')
 
           if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED_CLEANED" ]; then
             echo "Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED_CLEANED"
@@ -147,7 +143,7 @@ jobs:
         run: |
           VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
           VERMAGIC_EXPECTED="${{ matrix.build_env.vermagic }}"
-          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/~/\./g')
+          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/^[^\.]*\.[^\.]*\.[^\.]*\.//')
 
           echo "VERMAGIC: $VERMAGIC"
           echo "VERMAGIC_EXPECTED_CLEANED: $VERMAGIC_EXPECTED_CLEANED"
