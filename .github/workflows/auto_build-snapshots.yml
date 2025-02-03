@@ -130,10 +130,11 @@ jobs:
 
           VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
           VERMAGIC_EXPECTED="${{ matrix.build_env.vermagic }}"
-          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/^[^\.]*\.[^\.]*\.[^\.]*\.//')
-
-          if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED_CLEANED" ]; then
-            echo "Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED_CLEANED"
+          VERMAGIC_EXPECTED_CLEARED=$(echo "$VERMAGIC_EXPECTED" | sed 's/~/\./g')
+          echo "VERMAGIC: $VERMAGIC"
+          echo "VERMAGIC_EXPECTED_CLEARED: $VERMAGIC_EXPECTED_CLEARED"
+          if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED_CLEARED" ]; then
+            echo "Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED_CLEARED"
             exit 1
           fi
 
@@ -143,13 +144,11 @@ jobs:
         run: |
           VERMAGIC=$(cat ./build_dir/target-*/linux-*/linux-*/.vermagic)
           VERMAGIC_EXPECTED="${{ matrix.build_env.vermagic }}"
-          VERMAGIC_EXPECTED_CLEANED=$(echo "$VERMAGIC_EXPECTED" | sed 's/^[^\.]*\.[^\.]*\.[^\.]*\.//')
-
+          VERMAGIC_EXPECTED_CLEARED=$(echo "$VERMAGIC_EXPECTED" | sed 's/~/\./g')
           echo "VERMAGIC: $VERMAGIC"
-          echo "VERMAGIC_EXPECTED_CLEANED: $VERMAGIC_EXPECTED_CLEANED"
-
-          if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED_CLEANED" ]; then
-            echo "Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED_CLEANED"
+          echo "VERMAGIC_EXPECTED_CLEARED: $VERMAGIC_EXPECTED_CLEARED"
+          if [ "$VERMAGIC" != "$VERMAGIC_EXPECTED_CLEARED" ]; then
+            echo "Vermagic mismatch: $VERMAGIC, expected $VERMAGIC_EXPECTED_CLEARED"
             exit 1
           fi
 
