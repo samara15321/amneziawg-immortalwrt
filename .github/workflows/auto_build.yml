@@ -76,14 +76,14 @@ jobs:
           
       - name: Setup Ubuntu
         if: env.FILE_EXISTS == 'false'
-        continue-on-error: true       
+        continue-on-error: true
         run: |
           sudo apt update
           sudo apt install -y subversion build-essential gettext 2to3 python3-pyelftools python3-distutils-extra
           
       - name: Building kernel and tools
         if: env.FILE_EXISTS == 'false'
-        continue-on-error: true          
+        continue-on-error: true
         #if: ${{ steps.cache-tools-kernel.outputs.cache-hit != 'true' }}
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
