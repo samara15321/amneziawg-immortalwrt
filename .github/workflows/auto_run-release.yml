@@ -2,7 +2,7 @@ name: Auto_Sync OpenWRT Releases
 
 on:
   schedule:
-    - cron: '00 2 * * *'
+    - cron: '00 3 * * *'
   workflow_dispatch:
 
 jobs:
