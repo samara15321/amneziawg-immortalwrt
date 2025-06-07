@@ -209,13 +209,11 @@ read IS_SHOULD_CONFIGURE_AWG_INTERFACE
 if [ "$IS_SHOULD_CONFIGURE_AWG_INTERFACE" = "y" ] || [ "$IS_SHOULD_CONFIGURE_AWG_INTERFACE" = "Y" ]; then
     configure_amneziawg_interface
 else
-    printf "${GREEN}===== Скрипт завершён успешно =====${RESET}"
+    printf "${GREEN}===== Скрипт завершён =====${RESET}"
 fi
 
 
-
-
-echo -e "${YELLOW}Требуется перезапустить сетевые службы, сделать это сейчас? (y/n): ${RESET}"
+printf "${YELLOW}Требуется перезапустить сетевые службы, сделать это сейчас? (y/n): ${RESET}"
 read RESTART_NETWORK
 
 if [ "$RESTART_NETWORK" = "y" ] || [ "$RESTART_NETWORK" = "Y" ]; then
