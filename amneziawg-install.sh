@@ -138,8 +138,7 @@ configure_amneziawg_interface() {
     uci set network.${INTERFACE_NAME}.private_key=$AWG_PRIVATE_KEY_INT
     uci set network.${INTERFACE_NAME}.addresses=$AWG_IP
 
-    uci set network.${INTERFACE_NAME}.option_defaultroute='0'
-    uci set network.${INTERFACE_NAME}.option_delegate='0'
+    uci set network.${INTERFACE_NAME}.defaultroute='0'
 
     uci set network.${INTERFACE_NAME}.awg_jc=$AWG_JC
     uci set network.${INTERFACE_NAME}.awg_jmin=$AWG_JMIN
