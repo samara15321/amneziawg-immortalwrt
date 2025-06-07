@@ -209,7 +209,7 @@ echo -e "${YELLOW}To start the awg interface, network services need to be restar
 read RESTART_NETWORK
 
 if [ "$RESTART_NETWORK" = "y" ] || [ "$RESTART_NETWORK" = "Y" ]; then
-    echo -e "Перезапуск сети..."
+    echo -e "Reload network..."
     service network stop
     sleep 2
     service network start
