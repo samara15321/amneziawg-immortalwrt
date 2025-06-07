@@ -10,8 +10,8 @@ RESET="\033[0m"
 
 #Репозиторий OpenWRT должен быть доступен для установки зависимостей пакета kmod-amneziawg
 check_repo() {
-    printf "${RED}Проверка доступности репозитория OpenWRT..ожидайте...${RESET}"
-    opkg update | grep -q "Failed to download" && printf "opkg failed. Проверьте подключение к интернету, либо установленную дату" && exit 1
+    printf "\033[32;1mChecking OpenWrt repo availability...\033[0m\n"
+    opkg update | grep -q "Failed to download" && printf "\033[32;1mopkg failed. Check internet or date. Command for force ntp sync: ntpd -p ptbtime1.ptb.de\033[0m\n" && exit 1
 }
 
 install_awg_packages() {
