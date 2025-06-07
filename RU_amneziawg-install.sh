@@ -224,4 +224,4 @@ else
     echo -e "${YELLOW}Вы можете вручную перезапустить сеть командой: ${GREEN}service network stop && service network start${RESET}"
 fi
 
-main
+done
