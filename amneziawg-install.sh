@@ -136,8 +136,10 @@ configure_amneziawg_interface() {
     uci set network.${INTERFACE_NAME}=interface
     uci set network.${INTERFACE_NAME}.proto=$PROTO
     uci set network.${INTERFACE_NAME}.private_key=$AWG_PRIVATE_KEY_INT
-    uci set network.${INTERFACE_NAME}.listen_port='51821'
     uci set network.${INTERFACE_NAME}.addresses=$AWG_IP
+
+    uci set network.${INTERFACE_NAME}.option_defaultroute='0'
+    uci set network.${INTERFACE_NAME}.option_delegate='0'
 
     uci set network.${INTERFACE_NAME}.awg_jc=$AWG_JC
     uci set network.${INTERFACE_NAME}.awg_jmin=$AWG_JMIN
@@ -157,7 +159,7 @@ configure_amneziawg_interface() {
     uci set network.@${CONFIG_NAME}[0].name="${INTERFACE_NAME}_client"
     uci set network.@${CONFIG_NAME}[0].public_key=$AWG_PUBLIC_KEY_INT
     uci set network.@${CONFIG_NAME}[0].preshared_key=$AWG_PRESHARED_KEY_INT
-    uci set network.@${CONFIG_NAME}[0].route_allowed_ips='1'
+    uci set network.@${CONFIG_NAME}[0].route_allowed_ips='0'
     uci set network.@${CONFIG_NAME}[0].persistent_keepalive='25'
     uci set network.@${CONFIG_NAME}[0].endpoint_host=$AWG_ENDPOINT_INT
     uci set network.@${CONFIG_NAME}[0].allowed_ips='0.0.0.0/0'
