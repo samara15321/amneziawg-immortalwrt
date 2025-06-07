@@ -212,7 +212,7 @@ else
     printf "${GREEN}===== Скрипт завершён =====${RESET}"
 fi
 
-
+# перезапуск сети
 printf "${YELLOW}Требуется перезапустить сетевые службы, сделать это сейчас? (y/n): ${RESET}"
 read RESTART_NETWORK
 
