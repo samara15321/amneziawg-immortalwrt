@@ -212,6 +212,9 @@ else
     printf "${GREEN}===== Скрипт завершён успешно =====${RESET}"
 fi
 
+
+
+
 echo -e "${YELLOW}Требуется перезапустить сетевые службы, сделать это сейчас? (y/n): ${RESET}"
 read RESTART_NETWORK
 
