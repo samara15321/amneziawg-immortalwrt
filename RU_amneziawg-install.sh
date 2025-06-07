@@ -189,7 +189,7 @@ configure_amneziawg_interface() {
     fi
 
     if ! uci show firewall | grep -q "@forwarding.*name='${ZONE_NAME}'"; then
-        printf "Configured forwarding"
+        printf "${GREEN)Configured forwarding ${RESET}"
         uci add firewall forwarding
         uci set firewall.@forwarding[-1]=forwarding
         uci set firewall.@forwarding[-1].name="${ZONE_NAME}-lan"
