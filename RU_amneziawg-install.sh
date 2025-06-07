@@ -176,7 +176,7 @@ configure_amneziawg_interface() {
 
     echo -e "${YELLOW}Настройка firewall...${RESET}"
     if ! uci show firewall | grep -q "@zone.*name='${ZONE_NAME}'"; then
-        printf "${YELLOW}Zone Create${RESET}"
+        printf "Zone Create"
         uci add firewall zone
         uci set firewall.@zone[-1].name=$ZONE_NAME
         uci set firewall.@zone[-1].network=$INTERFACE_NAME
@@ -190,7 +190,7 @@ configure_amneziawg_interface() {
     fi
 
     if ! uci show firewall | grep -q "@forwarding.*name='${ZONE_NAME}'"; then
-        printf "${YELLOW}Configured forwarding${RESET}"
+        printf "Configured forwarding"
         uci add firewall forwarding
         uci set firewall.@forwarding[-1]=forwarding
         uci set firewall.@forwarding[-1].name="${ZONE_NAME}-lan"
