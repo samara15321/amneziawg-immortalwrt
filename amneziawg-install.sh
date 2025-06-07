@@ -205,4 +205,16 @@ else
     printf "\033[32;1mSkipping amneziawg interface configuration.\033[0m\n"
 fi
 
+echo -e "${YELLOW}Требуется перезапустить сетевые службы, сделать это сейчас? (y/n): ${RESET}"
+read RESTART_NETWORK
+
+if [ "$RESTART_NETWORK" = "y" ] || [ "$RESTART_NETWORK" = "Y" ]; then
+    echo -e "Перезапуск сети..."
+    service network stop
+    sleep 2
+    service network start
+else
+    echo -e "${YELLOW}Вы можете вручную перезапустить сеть командой: ${GREEN}service network stop && service network start${RESET}"
+fi
+
 service network stop && service network start
