@@ -9,3 +9,8 @@ Source Code [AmneziaVPN/WG for OpenWrt](https://github.com/amnezia-vpn/amneziawg
 ```
 sh <(wget -O - https://raw.githubusercontent.com/samara15321/amneziawg-immortalwrt/refs/heads/master/amneziawg-install.sh)
 ```
+Rus lang (на русском)
+```
+sh <(wget -O - https://raw.githubusercontent.com/samara15321/amneziawg-immortalwrt/refs/heads/master/RU_amneziawg-install.sh)
+```
+
