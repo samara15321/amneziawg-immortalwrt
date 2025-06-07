@@ -212,8 +212,8 @@ else
     printf "${GREEN}===== Скрипт завершён =====${RESET}"
 fi
 
-# перезапуск сети
-printf "${YELLOW}Требуется перезапустить сетевые службы, сделать это сейчас? (y/n): ${RESET}"
+#перезапуск сети
+printf "${YELLOW}Для запуска интерфейса awg требуется перезапустить сетевые службы, сделать это сейчас? (y/n): ${RESET}"
 read RESTART_NETWORK
 
 if [ "$RESTART_NETWORK" = "y" ] || [ "$RESTART_NETWORK" = "Y" ]; then
