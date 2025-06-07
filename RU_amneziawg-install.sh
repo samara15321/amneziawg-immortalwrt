@@ -10,7 +10,7 @@ RESET="\033[0m"
 
 #Репозиторий OpenWRT должен быть доступен для установки зависимостей пакета kmod-amneziawg
 check_repo() {
-    printf "\033[32;1mChecking OpenWrt repo availability...\033[0m\n"
+    printf "${RED}Проверка доступности репозитория OpenWRT...${RESET}"
     opkg update | grep -q "Ошибка загрузки" && printf "\033[32;1mopkg failed. Проверьте подключение к интернету, либо установленную дату\033[0m\n" && exit 1
 }
 
@@ -203,7 +203,7 @@ configure_amneziawg_interface() {
 
 check_repo
 
-установка_awg_packages
+install_awg_packages
 
 printf "${GREEN}Вы хотите настроить amneziawg interface? (y/n): ${RESET}"
 read IS_SHOULD_CONFIGURE_AWG_INTERFACE
