@@ -36,66 +36,66 @@ install_awg_packages() {
         wget -O "$AWG_DIR/$KMOD_AMNEZIAWG_FILENAME" "$DOWNLOAD_URL"
 
         if [ $? -eq 0 ]; then
-            echo "${GREEN} kmod-amneziawg загружен успешно${RESET}"
+            echo "kmod-amneziawg загружен успешно"
         else
-            echo "${RED}Ошибка загрузки kmod-amneziawg. Установите вручную и повторите${RESET}"
+            echo "Ошибка загрузки kmod-amneziawg. Установите вручную и повторите"
             exit 1
         fi
         
         opkg install "$AWG_DIR/$KMOD_AMNEZIAWG_FILENAME"
 
         if [ $? -eq 0 ]; then
-            echo "${GREEN} kmod-amneziawg загружен успешно${RESET}"
+            echo "kmod-amneziawg загружен успешно"
         else
-            echo "${RED}Ошибка загрузки kmod-amneziawg. Установите вручную и повторите${RESET}"
+            echo "Ошибка загрузки kmod-amneziawg. Установите вручную и повторите"
             exit 1
         fi
     fi
 
     if opkg list-installed | grep -q amneziawg-tools; then
-        echo "${GREEN} amneziawg-tools уже установлен${RESET}"
+        echo "amneziawg-tools уже установлен"
     else
         AMNEZIAWG_TOOLS_FILENAME="amneziawg-tools${PKGPOSTFIX}"
         DOWNLOAD_URL="${BASE_URL}v${VERSION}/${AMNEZIAWG_TOOLS_FILENAME}"
         wget -O "$AWG_DIR/$AMNEZIAWG_TOOLS_FILENAME" "$DOWNLOAD_URL"
 
         if [ $? -eq 0 ]; then
-            echo "${GREEN} amneziawg-tools загружен успешно${RESET}"
+            echo "amneziawg-tools загружен успешно"
         else
-            echo "${RED}Ошибка загрузки amneziawg-tools. Установите вручную и повторите${RESET}"
+            echo "Ошибка загрузки amneziawg-tools. Установите вручную и повторите"
             exit 1
         fi
 
         opkg install "$AWG_DIR/$AMNEZIAWG_TOOLS_FILENAME"
 
         if [ $? -eq 0 ]; then
-            echo "${GREEN} amneziawg-tools загружен успешно${RESET}"
+            echo "amneziawg-tools загружен успешно"
         else
-            echo "${RED}Ошибка загрузки amneziawg-tools. Установите вручную и повторите${RESET}"
+            echo "Ошибка загрузки amneziawg-tools. Установите вручную и повторите"
             exit 1
         fi
     fi
     
     if opkg list-installed | grep -q luci-app-amneziawg; then
-        echo "${GREEN}luci-app-amneziawg уже установлен${RESET}"
+        echo "luci-app-amneziawg уже установлен"
     else
         LUCI_APP_AMNEZIAWG_FILENAME="luci-app-amneziawg${PKGPOSTFIX}"
         DOWNLOAD_URL="${BASE_URL}v${VERSION}/${LUCI_APP_AMNEZIAWG_FILENAME}"
         wget -O "$AWG_DIR/$LUCI_APP_AMNEZIAWG_FILENAME" "$DOWNLOAD_URL"
 
         if [ $? -eq 0 ]; then
-            echo "${GREEN}luci-app-amneziawg загружен успешно${RESET}"
+            echo "luci-app-amneziawg загружен успешно"
         else
-            echo "${RED}Ошибка загрузки luci-app-amneziawg. Установите вручную и повторите${RESET}"
+            echo "Ошибка загрузки luci-app-amneziawg. Установите вручную и повторите"
             exit 1
         fi
 
         opkg install "$AWG_DIR/$LUCI_APP_AMNEZIAWG_FILENAME"
 
         if [ $? -eq 0 ]; then
-            echo "${GREEN}luci-app-amneziawg загружен успешно${RESET}"
+            echo "luci-app-amneziawg загружен успешно"
         else
-            echo "${RED}Ошибка загрузки luci-app-amneziawg. Установите вручную и повторите${RESET}"
+            echo "Ошибка загрузки luci-app-amneziawg. Установите вручную и повторите"
             exit 1
         fi
     fi
@@ -116,7 +116,7 @@ configure_amneziawg_interface() {
         if echo "$AWG_IP" | egrep -oq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
             break
         else
-            echo "${RED}IP неверен. Повторите ввод.${RESET}"
+            echo "IP неверен. Повторите ввод."
         fi
     done
 
@@ -218,7 +218,7 @@ echo -e "${YELLOW}Требуется перезапустить сетевые �
 read RESTART_NETWORK
 
 if [ "$RESTART_NETWORK" = "y" ] || [ "$RESTART_NETWORK" = "Y" ]; then
-    echo -e "${YELLOW}Перезапуск сети...${RESET}"
+    echo -e "Перезапуск сети..."
     service network stop
     sleep 2
     service network start
