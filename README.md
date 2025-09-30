@@ -1,4 +1,4 @@
-[AmneziaWG 2.0](https://github.com/samara15321/awg2))
+[AmneziaWG 2.0](https://github.com/samara15321/awg2)
 --------
 
 
