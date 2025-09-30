@@ -1,6 +1,7 @@
 [AmneziaWG 2.0](https://github.com/samara15321/awg2)
 --------
-
+Ввиду неактуальности дальнейшая сборка версии 1.0 остановлена.
+-------
 
 AmneziaWG for → [OpenWrt](https://github.com/samara1531/amneziawg-openwrt)
 -----------------------
